@@ -5,42 +5,16 @@ vcpkg_from_git(
 )
 
 set(SOURCE_SUBDIR "${SOURCE_PATH}/libpolycall-v1")
-if(NOT EXISTS "${SOURCE_SUBDIR}/src" OR NOT EXISTS "${SOURCE_SUBDIR}/include")
+if(NOT EXISTS "${SOURCE_SUBDIR}")
     set(SOURCE_SUBDIR "${SOURCE_PATH}")
 endif()
 
-vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
-    FEATURES
-        tools LIBPOLYCALL_BUILD_TOOLS
-        tests LIBPOLYCALL_BUILD_TESTS
-)
-
-file(MAKE_DIRECTORY "${SOURCE_SUBDIR}/cmake")
-file(COPY "${CMAKE_CURRENT_LIST_DIR}/libpolycall-config.cmake.in" DESTINATION "${SOURCE_SUBDIR}/cmake")
-
-file(WRITE "${SOURCE_SUBDIR}/cmake/libpolycall.pc.in" [=[
-prefix=@prefix@
-exec_prefix=@exec_prefix@
-libdir=@libdir@
-includedir=@includedir@
-
-Name: libpolycall
-Description: Polymorphic cross-language RPC protocol with zero-trust architecture
-Version: @PACKAGE_VERSION@
-Libs: -L${libdir} -lpolycall
-Libs.private: -lssl -lcrypto
-Cflags: -I${includedir}
-]=])
-
 file(WRITE "${SOURCE_SUBDIR}/CMakeLists.txt" [=[
 cmake_minimum_required(VERSION 3.20)
-project(libpolycall VERSION 1.1.0 LANGUAGES C)
+project(libpolycall C)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
-
-option(LIBPOLYCALL_BUILD_TOOLS "Build polycall executable" OFF)
-option(LIBPOLYCALL_BUILD_TESTS "Build test executables" OFF)
 
 set(POLYCALL_SOURCES
     src/network.c
@@ -53,12 +27,15 @@ set(POLYCALL_SOURCES
     src/polycall_tokenizer.c
 )
 
+option(LIBPOLYCALL_BUILD_TOOLS "Build polycall executable" OFF)
+option(LIBPOLYCALL_BUILD_TESTS "Build test executables" OFF)
+
 find_package(OpenSSL REQUIRED)
 if(WIN32)
-    set(POLYCALL_PLATFORM_LIBS ws2_32)
+    set(THREAD_LIBRARIES ws2_32)
 else()
     find_package(Threads REQUIRED)
-    set(POLYCALL_PLATFORM_LIBS Threads::Threads)
+    set(THREAD_LIBRARIES Threads::Threads)
 endif()
 
 add_library(polycall ${POLYCALL_SOURCES})
@@ -74,7 +51,7 @@ target_include_directories(polycall
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/libpolycall>
 )
-target_link_libraries(polycall PUBLIC OpenSSL::SSL OpenSSL::Crypto ${POLYCALL_PLATFORM_LIBS})
+target_link_libraries(polycall PUBLIC OpenSSL::SSL OpenSSL::Crypto ${THREAD_LIBRARIES})
 
 if(LIBPOLYCALL_BUILD_TOOLS)
     add_executable(polycall_tool main.c)
@@ -106,10 +83,9 @@ configure_package_config_file(
 )
 write_basic_package_version_file(
     "${CMAKE_CURRENT_BINARY_DIR}/libpolycallConfigVersion.cmake"
-    VERSION "${PROJECT_VERSION}"
+    VERSION "1.1.0"
     COMPATIBILITY SameMajorVersion
 )
-
 install(EXPORT libpolycallTargets
     FILE libpolycallTargets.cmake
     NAMESPACE libpolycall::
@@ -125,15 +101,55 @@ set(prefix "${CMAKE_INSTALL_PREFIX}")
 set(exec_prefix "${CMAKE_INSTALL_PREFIX}")
 set(libdir "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 set(includedir "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/libpolycall")
-set(PACKAGE_VERSION "${PROJECT_VERSION}")
+set(PACKAGE_VERSION "1.1.0")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/libpolycall.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/libpolycall.pc" @ONLY)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/libpolycall.pc" DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
 ]=])
 
+file(MAKE_DIRECTORY "${SOURCE_SUBDIR}/cmake")
+file(COPY "${CMAKE_CURRENT_LIST_DIR}/libpolycall-config.cmake.in" DESTINATION "${SOURCE_SUBDIR}/cmake")
+file(WRITE "${SOURCE_SUBDIR}/cmake/libpolycall.pc.in" [=[
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: libpolycall
+Description: Polymorphic cross-language RPC protocol with zero-trust architecture
+Version: @PACKAGE_VERSION@
+Libs: -L${libdir} -lpolycall
+Libs.private: -lssl -lcrypto
+Cflags: -I${includedir}
+]=])
+
+set(BUILD_TOOLS OFF)
+set(BUILD_TESTS OFF)
+if("tools" IN_LIST FEATURES)
+    set(BUILD_TOOLS ON)
+endif()
+if("tests" IN_LIST FEATURES)
+    set(BUILD_TESTS ON)
+endif()
+
+if(VCPKG_LIBRARY_LINKAGE STREQUAL "dynamic")
+    set(BUILD_SHARED_LIBS ON)
+else()
+    set(BUILD_SHARED_LIBS OFF)
+endif()
+
+if("shared" IN_LIST FEATURES)
+    set(BUILD_SHARED_LIBS ON)
+endif()
+if("static" IN_LIST FEATURES)
+    set(BUILD_SHARED_LIBS OFF)
+endif()
+
 vcpkg_cmake_configure(
     SOURCE_PATH "${SOURCE_SUBDIR}"
     OPTIONS
-        ${FEATURE_OPTIONS}
+        -DLIBPOLYCALL_BUILD_TOOLS=${BUILD_TOOLS}
+        -DLIBPOLYCALL_BUILD_TESTS=${BUILD_TESTS}
+        -DBUILD_SHARED_LIBS=${BUILD_SHARED_LIBS}
 )
 
 vcpkg_cmake_install()

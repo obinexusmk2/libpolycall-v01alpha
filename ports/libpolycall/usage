@@ -3,12 +3,7 @@ libpolycall provides CMake targets:
     find_package(libpolycall CONFIG REQUIRED)
     target_link_libraries(main PRIVATE libpolycall::libpolycall)
 
-When consuming from vcpkg, configure your project with the vcpkg toolchain so
-CMake can discover `libpolycallConfig.cmake` automatically:
-
-    cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake
-
-Optional features:
+Optional feature flags:
 
     "tools"  - builds and installs the `polycall` executable
-    "tests"  - builds test executables during packaging
+    "tests"  - builds the test executables during packaging
