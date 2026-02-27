@@ -2,7 +2,6 @@
   "name": "libpolycall",
   "version": "1.1.0",
   "description": "Polymorphic cross-language RPC protocol with zero-trust architecture",
-  "homepage": "https://github.com/obinexusmk2/libpolycall-v1",
   "license": "MIT",
   "dependencies": [
     "openssl",
@@ -13,14 +12,24 @@
     {
       "name": "vcpkg-cmake-config",
       "host": true
+    },
+    {
+      "name": "pthreads",
+      "platform": "!windows"
     }
   ],
   "features": {
+    "shared": {
+      "description": "Build shared library"
+    },
+    "static": {
+      "description": "Build static library"
+    },
     "tools": {
-      "description": "Build and install the polycall executable"
+      "description": "Build polycall executable"
     },
     "tests": {
-      "description": "Build test executables during package build"
+      "description": "Build test suite"
     }
   }
 }
