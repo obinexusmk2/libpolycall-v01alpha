@@ -2,10 +2,9 @@
        PROGRAM-ID. CBL-POLYCALL.
        DATA DIVISION.
        WORKING-STORAGE SECTION.
-       01 REQUEST-ID PIC 9(10) VALUE 10001.
-       01 RESULT-MSG PIC X(64).
+       01 ACCOUNT-ID         PIC X(16) VALUE "0000000000000001".
+       01 RESPONSE-BALANCE   PIC 9(9)V99 VALUE 0.
        PROCEDURE DIVISION.
-           DISPLAY "COBOL RECTANGLE driver -> sending account query".
-           MOVE "ACCOUNT LOOKUP FOR 10001" TO RESULT-MSG.
-           DISPLAY RESULT-MSG.
+           DISPLAY "COBOL RECTANGLE driver sending account query: " ACCOUNT-ID.
+           DISPLAY "Balance from DRIVER daemon: " RESPONSE-BALANCE.
            STOP RUN.

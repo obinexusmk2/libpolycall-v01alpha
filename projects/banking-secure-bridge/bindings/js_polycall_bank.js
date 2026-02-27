@@ -1,8 +1,10 @@
-const http = require("http");
+// SQUARE binding demo for Node.js
+function submitTransaction(accountId, amount) {
+  return { guid: "seeded-guid-demo", status: "accepted", accountId, amount };
+}
 
-http.createServer((req, res) => {
-  res.writeHead(200, { "Content-Type": "application/json" });
-  res.end(JSON.stringify({ binding: "SQUARE", status: "ok", endpoint: req.url }));
-}).listen(8080, () => {
-  console.log("js_polycall_bank listening on :8080");
-});
+if (require.main === module) {
+  console.log(submitTransaction("A-100", 120.5));
+}
+
+module.exports = { submitTransaction };

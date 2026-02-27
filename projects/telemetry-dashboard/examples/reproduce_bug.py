@@ -1,6 +1,4 @@
-def replay(guid: str):
-    print(f"Replaying telemetry trail for {guid}")
-
+GUID_TRAIL = ["guid-1", "guid-2", "guid-3"]
 
 if __name__ == "__main__":
-    replay("guid-demo-001")
+    print("replaying:", GUID_TRAIL)

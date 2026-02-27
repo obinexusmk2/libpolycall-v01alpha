@@ -1,11 +1,10 @@
-#include "cir_object.h"
-
+#include "../include/cir_types.h"
 #include <string.h>
 
-void cir_assign_float(CIR_Value* v, double input, const char* guid) {
-    v->type = FLOAT64;
-    v->value.f64 = input;
-    v->size = sizeof(double);
-    strncpy(v->guid, guid, sizeof(v->guid) - 1);
-    v->guid[sizeof(v->guid) - 1] = '\0';
+CIR_Value cir_from_float(double v, const char* guid) {
+    CIR_Value out = {0};
+    out.type = FLOAT64;
+    out.value.f64 = v;
+    strncpy(out.guid, guid, sizeof(out.guid) - 1);
+    return out;
 }

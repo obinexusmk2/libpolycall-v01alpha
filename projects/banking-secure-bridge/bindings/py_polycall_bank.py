@@ -1,13 +1,15 @@
-from fastapi import FastAPI
+"""SQUARE binding example: symmetric typed request/response over libpolycall."""
+from dataclasses import dataclass
 
-app = FastAPI(title="polycall-bank")
+@dataclass
+class Transaction:
+    account_id: str
+    amount: float
 
 
-@app.get("/account/{account_id}")
-def read_account(account_id: int):
-    return {
-        "account_id": account_id,
-        "status": "active",
-        "binding": "SQUARE",
-        "transport": "libpolycall-driver"
-    }
+def submit(tx: Transaction) -> dict:
+    return {"guid": "seeded-guid-demo", "status": "accepted", "amount": tx.amount}
+
+
+if __name__ == "__main__":
+    print(submit(Transaction("A-100", 120.50)))

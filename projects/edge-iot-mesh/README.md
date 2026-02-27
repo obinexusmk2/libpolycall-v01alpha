@@ -1,20 +1,19 @@
-# Edge IoT Mesh
+# Edge-Computing IoT Mesh Network
 
-This sample demonstrates edge caching + trigger updates with **driver-oriented** mesh routing.
+This sample demonstrates edge caching plus GUID-oriented routing and conflict handling.
 
 ## Highlights
-- Lightweight edge node process for chained regions (US -> UK -> France).
-- Delta trigger update and conflict-resolution placeholder hooks.
-- Multi-language sensor emitters (Python, Go, embedded C).
+- Edge cache node and trigger-update logic.
+- Multi-language sensor stubs (Python, Go, C).
+- Canonical IR type definitions for distributed conflict resolution.
 
 ## Build
 ```bash
 make
-./edge_node
 ```
 
-## vcpkg/CMake usage
+## vcpkg integration
 ```cmake
 find_package(libpolycall CONFIG REQUIRED)
-target_link_libraries(edge_node PRIVATE libpolycall::libpolycall)
+target_link_libraries(${PROJECT_NAME} PRIVATE libpolycall::libpolycall)
 ```

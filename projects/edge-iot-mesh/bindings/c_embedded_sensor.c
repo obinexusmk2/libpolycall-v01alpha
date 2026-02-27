@@ -1,6 +1,6 @@
 #include <stdio.h>
 
 int main(void) {
-    puts("{\"sensor\":\"mcu-c\",\"value\":17}");
+    puts("embedded sensor payload sent");
     return 0;
 }

@@ -82,3 +82,9 @@ For project-specific issues:
 2. Review configuration in `config/project.json`
 3. Execute test suites for validation
 4. Consult LibPolyCall main documentation
+
+## Additional architecture demos
+
+- `projects/banking-secure-bridge`: Zero-trust banking bridge with C driver + COBOL/Python/Node bindings.
+- `projects/telemetry-dashboard`: Canonical IR telemetry stream with multi-language observers.
+- `projects/edge-iot-mesh`: Edge cache mesh demonstration with trigger-based propagation.

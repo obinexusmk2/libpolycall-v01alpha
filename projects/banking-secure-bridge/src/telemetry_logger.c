@@ -1,15 +1,10 @@
-#include "telemetry_logger.h"
-
 #include <stdio.h>
-#include <time.h>
+#include "../include/polycall_security.h"
 
-void telemetry_log_transition(const char* state, const PolyCall_Header* header, const char* detail) {
-    const time_t now = time(NULL);
-    printf("[%ld] state=%s session=%llu sequence=%u node=%u detail=%s\n",
-           (long)now,
+void telemetry_log_state(const char* state, const PolyCall_Header* hdr) {
+    printf("[telemetry] state=%s guid_seed0=%u session=%llu seq=%u\n",
            state,
-           (unsigned long long)header->session,
-           header->sequence,
-           header->node_type,
-           detail);
+           (unsigned)hdr->seed[0],
+           (unsigned long long)hdr->session,
+           hdr->sequence);
 }

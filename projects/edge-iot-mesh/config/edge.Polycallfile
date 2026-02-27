@@ -1,6 +1,6 @@
-edge_topology {
-  source = "us"
-  hops = ["uk", "france"]
-  zero_trust = true
-  update_mode = "delta-trigger"
-}
+[mesh]
+primary=us
+replica_1=uk
+replica_2=france
+zero_trust=true
+edge_cache=true

@@ -1,14 +1,11 @@
 CC := gcc
-CFLAGS := -Wall -Wextra -I../../libpolycall-v1/include -Isrc -fPIC -DUSE_CANONICAL_IR=1
-LDFLAGS := ../../libpolycall-v1/lib/libpolycall.a -lssl -lcrypto -pthread
+CFLAGS := -Wall -Wextra -I./include -I../../libpolycall-v1/include -fPIC -DUSE_CANONICAL_IR=1
+LDFLAGS := -L../../libpolycall-v1/lib -lpolycall -lssl -lcrypto -pthread
 
-TARGET := edge_node
-SRCS := src/edge_node.c src/trigger_update.c src/mesh_routing.c src/conflict_resolution.c
+all: edge_node
 
-all: $(TARGET)
-
-$(TARGET): $(SRCS)
-	$(CC) $(CFLAGS) $(SRCS) -o $@ $(LDFLAGS)
+edge_node: src/edge_node.c src/trigger_update.c src/mesh_routing.c src/conflict_resolution.c
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 clean:
-	rm -f $(TARGET)
+	rm -f edge_node

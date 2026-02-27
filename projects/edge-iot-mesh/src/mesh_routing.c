@@ -1,5 +1,6 @@
-#include <stdio.h>
+#include <stdint.h>
 
-void route_message(const char* from, const char* to) {
-    printf("route %s -> %s via libpolycall edge mesh\n", from, to);
+uint8_t route_node_type(const char* node) {
+    if (!node) return 0;
+    return 0x02;
 }

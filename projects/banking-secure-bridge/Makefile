@@ -1,14 +1,11 @@
 CC := gcc
-CFLAGS := -Wall -Wextra -I../../libpolycall-v1/include -Isrc -fPIC -DUSE_CANONICAL_IR=1
-LDFLAGS := ../../libpolycall-v1/lib/libpolycall.a -lssl -lcrypto -pthread
+CFLAGS := -Wall -Wextra -I./include -I../../libpolycall-v1/include -fPIC -DUSE_CANONICAL_IR=1
+LDFLAGS := -L../../libpolycall-v1/lib -lpolycall -lssl -lcrypto -pthread
 
-TARGET := banking_bridge
-SRCS := src/banking_bridge.c src/zero_trust_auth.c src/telemetry_logger.c
+all: banking_bridge
 
-all: $(TARGET)
-
-$(TARGET): $(SRCS)
-	$(CC) $(CFLAGS) $(SRCS) -o $@ $(LDFLAGS)
+banking_bridge: src/banking_bridge.c src/zero_trust_auth.c src/telemetry_logger.c
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 clean:
-	rm -f $(TARGET)
+	rm -f banking_bridge

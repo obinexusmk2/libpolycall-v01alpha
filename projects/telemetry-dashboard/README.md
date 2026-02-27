@@ -1,20 +1,19 @@
-# Telemetry Dashboard
+# Polyglot Real-Time Telemetry Dashboard
 
-This sample demonstrates a **SQUARE binding** flow where Python/Go/Lua/JS observers consume equivalent Canonical IR values.
+This sample focuses on **SQUARE binding symmetry** around a canonical CIR payload.
 
 ## Highlights
-- Canonical IR value definition with GUID trace field.
-- Placeholder Huffman-AVL transform hook and state snapshot logger.
-- Reproduction script to replay a GUID trail.
+- Canonical IR C types with GUID metadata.
+- Language observers (Python, Go, Lua, JS dashboard stubs).
+- State snapshots for reproducible trails.
 
 ## Build
 ```bash
 make
-./telemetry_server
 ```
 
-## vcpkg/CMake usage
+## vcpkg integration
 ```cmake
 find_package(libpolycall CONFIG REQUIRED)
-target_link_libraries(telemetry_server PRIVATE libpolycall::libpolycall)
+target_link_libraries(${PROJECT_NAME} PRIVATE libpolycall::libpolycall)
 ```

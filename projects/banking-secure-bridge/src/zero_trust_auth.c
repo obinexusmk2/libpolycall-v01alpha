@@ -1,31 +1,22 @@
-#include "zero_trust_auth.h"
-
-#include <openssl/sha.h>
+#include <stdint.h>
 #include <string.h>
-#include <time.h>
+#include "../include/polycall_security.h"
 
-static uint16_t crc16(const uint8_t* data, size_t len) {
-    uint16_t crc = 0xFFFF;
-    for (size_t i = 0; i < len; ++i) {
-        crc ^= (uint16_t)data[i] << 8;
-        for (int b = 0; b < 8; ++b) {
-            crc = (crc & 0x8000) ? (uint16_t)((crc << 1) ^ 0x1021) : (uint16_t)(crc << 1);
-        }
-    }
-    return crc;
+static uint16_t checksum16(const uint8_t* data, size_t len) {
+    uint32_t sum = 0;
+    for (size_t i = 0; i < len; ++i) sum += data[i];
+    return (uint16_t)(sum & 0xFFFFu);
 }
 
-void polycall_header_seed(PolyCall_Header* header, const uint8_t* payload, size_t payload_len, uint8_t node_type) {
-    memset(header, 0, sizeof(*header));
-    SHA256(payload, payload_len, header->seed);
-    header->session = (uint64_t)time(NULL);
-    header->sequence = 1U;
-    header->checksum = crc16(payload, payload_len);
-    header->node_type = node_type;
+void polycall_seed_header(PolyCall_Header* h, uint8_t node_type, uint64_t session) {
+    memset(h, 0, sizeof(*h));
+    h->node_type = node_type;
+    h->session = session;
+    h->sequence = 1;
+    for (size_t i = 0; i < sizeof(h->seed); ++i) h->seed[i] = (uint8_t)(i ^ node_type);
+    h->checksum = checksum16(h->seed, sizeof(h->seed));
 }
 
-bool polycall_header_validate(const PolyCall_Header* header, const uint8_t* payload, size_t payload_len) {
-    uint8_t expected[32];
-    SHA256(payload, payload_len, expected);
-    return memcmp(header->seed, expected, sizeof(expected)) == 0 && header->checksum == crc16(payload, payload_len);
+int polycall_validate_header(const PolyCall_Header* h) {
+    return h->checksum == checksum16(h->seed, sizeof(h->seed));
 }

@@ -3,5 +3,5 @@ package main
 import "fmt"
 
 func main() {
-	fmt.Println(`{"sensor":"industrial-go","value":88}`)
+	fmt.Println("industrial sensor node demo")
 }

@@ -1,2 +1,2 @@
-local guid = "guid-demo-001"
-print(string.format('{"guid":"%s","binding":"lua"}', guid))
+local payload = { observer = "lua", status = "ok" }
+print(payload.observer, payload.status)
