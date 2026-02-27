@@ -1,0 +1,7 @@
+server {
+  source = "cobol"
+  bind_port = 3005
+  expose_port = 8080
+  target = "python-fastapi"
+  zero_trust = true
+}
