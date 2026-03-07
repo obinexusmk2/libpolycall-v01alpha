@@ -52,6 +52,7 @@ static void set_error_state(PolycallTokenizer* tokenizer, const char* message) {
         tokenizer->state.error_message = polycall_strdup(ERROR_OUT_OF_MEMORY);
     }
 
+    tokenizer->state.error_message = polycall_strdup(message);
     tokenizer->state.error_count++;
 }
 
