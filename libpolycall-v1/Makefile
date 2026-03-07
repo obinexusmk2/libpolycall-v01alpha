@@ -6,7 +6,7 @@ LDFLAGS := -pthread -lssl -lcrypto
 # Platform-specific settings
 ifeq ($(OS),Windows_NT)
     LDFLAGS += -lws2_32
-    CFLAGS += -D_WIN32
+    CFLAGS += -D_WIN32 -DPOLYCALL_DLL_EXPORT
     SHARED_EXT := dll
     EXE_EXT := .exe
 else
