@@ -13,6 +13,17 @@
 static const char* ERROR_BUFFER_OVERFLOW = "Buffer overflow";
 static const char* ERROR_INVALID_INPUT = "Invalid input";
 
+static char* polycall_strdup(const char* source) {
+    if (!source) return NULL;
+
+    size_t length = strlen(source) + 1;
+    char* copy = malloc(length);
+    if (!copy) return NULL;
+
+    memcpy(copy, source, length);
+    return copy;
+}
+
 // Default configuration
 const PolycallTokenizerConfig POLYCALL_TOKENIZER_DEFAULT_CONFIG = {
     .limits = {
@@ -32,7 +43,7 @@ static void set_error_state(PolycallTokenizer* tokenizer, const char* message) {
     if (tokenizer->state.error_message) {
         free(tokenizer->state.error_message);
     }
-    tokenizer->state.error_message = strdup(message);
+    tokenizer->state.error_message = polycall_strdup(message);
     tokenizer->state.error_count++;
 }
 
