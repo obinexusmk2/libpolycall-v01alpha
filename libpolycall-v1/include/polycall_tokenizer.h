@@ -5,6 +5,24 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#if defined(_WIN32) || defined(__CYGWIN__)
+  #if defined(_MSC_VER)
+    #define POLYCALL_HELPER_DLL_IMPORT __declspec(dllimport)
+    #define POLYCALL_HELPER_DLL_EXPORT __declspec(dllexport)
+  #else
+    #define POLYCALL_HELPER_DLL_IMPORT __attribute__((dllimport))
+    #define POLYCALL_HELPER_DLL_EXPORT __attribute__((dllexport))
+  #endif
+
+  #if defined(POLYCALL_DLL_EXPORT)
+    #define POLYCALL_API POLYCALL_HELPER_DLL_EXPORT
+  #else
+    #define POLYCALL_API POLYCALL_HELPER_DLL_IMPORT
+  #endif
+#else
+  #define POLYCALL_API
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -75,32 +93,32 @@ typedef struct {
 } PolycallTokenizer;
 
 // Core tokenizer functions
-PolycallTokenizer* polycall_tokenizer_create(const PolycallTokenizerConfig* config);
-void polycall_tokenizer_destroy(PolycallTokenizer* tokenizer);
-void polycall_tokenizer_reset(PolycallTokenizer* tokenizer);
+POLYCALL_API PolycallTokenizer* polycall_tokenizer_create(const PolycallTokenizerConfig* config);
+POLYCALL_API void polycall_tokenizer_destroy(PolycallTokenizer* tokenizer);
+POLYCALL_API void polycall_tokenizer_reset(PolycallTokenizer* tokenizer);
 
 // Input management
-bool polycall_tokenizer_set_input(PolycallTokenizer* tokenizer, const char* input, size_t length);
-bool polycall_tokenizer_process(PolycallTokenizer* tokenizer, const TokenizerOperations* ops);
+POLYCALL_API bool polycall_tokenizer_set_input(PolycallTokenizer* tokenizer, const char* input, size_t length);
+POLYCALL_API bool polycall_tokenizer_process(PolycallTokenizer* tokenizer, const TokenizerOperations* ops);
 
 // Pattern matching functions
-bool polycall_tokenizer_match_identifier(const char* input, size_t* length);
-bool polycall_tokenizer_match_number(const char* input, size_t* length);
-bool polycall_tokenizer_match_string(const char* input, size_t* length);
-bool polycall_tokenizer_match_operator(const char* input, size_t* length);
+POLYCALL_API bool polycall_tokenizer_match_identifier(const char* input, size_t* length);
+POLYCALL_API bool polycall_tokenizer_match_number(const char* input, size_t* length);
+POLYCALL_API bool polycall_tokenizer_match_string(const char* input, size_t* length);
+POLYCALL_API bool polycall_tokenizer_match_operator(const char* input, size_t* length);
 
 // Operation composition
-TokenizerOperations* polycall_tokenizer_create_ops(TokenPattern* patterns, TokenConsumer* consumers, size_t count);
-TokenizerOperations* polycall_tokenizer_compose_ops(const TokenizerOperations* ops1, const TokenizerOperations* ops2);
-void polycall_tokenizer_destroy_ops(TokenizerOperations* ops);
+POLYCALL_API TokenizerOperations* polycall_tokenizer_create_ops(TokenPattern* patterns, TokenConsumer* consumers, size_t count);
+POLYCALL_API TokenizerOperations* polycall_tokenizer_compose_ops(const TokenizerOperations* ops1, const TokenizerOperations* ops2);
+POLYCALL_API void polycall_tokenizer_destroy_ops(TokenizerOperations* ops);
 
 // State and result access
-const PolycallTokenArray* polycall_tokenizer_get_tokens(const PolycallTokenizer* tokenizer);
-const char* polycall_tokenizer_get_error(const PolycallTokenizer* tokenizer);
-PolycallTokenizerState polycall_tokenizer_get_state(const PolycallTokenizer* tokenizer);
+POLYCALL_API const PolycallTokenArray* polycall_tokenizer_get_tokens(const PolycallTokenizer* tokenizer);
+POLYCALL_API const char* polycall_tokenizer_get_error(const PolycallTokenizer* tokenizer);
+POLYCALL_API PolycallTokenizerState polycall_tokenizer_get_state(const PolycallTokenizer* tokenizer);
 
 // Default configuration
-extern const PolycallTokenizerConfig POLYCALL_TOKENIZER_DEFAULT_CONFIG;
+POLYCALL_API extern const PolycallTokenizerConfig POLYCALL_TOKENIZER_DEFAULT_CONFIG;
 
 #ifdef __cplusplus
 }
