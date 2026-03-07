@@ -24,6 +24,20 @@ static char* polycall_strdup(const char* source) {
     memcpy(copy, source, length);
     return copy;
 }
+static const char* ERROR_BUFFER_OVERFLOW = "Buffer overflow";
+static const char* ERROR_INVALID_INPUT = "Invalid input";
+static const char* ERROR_OUT_OF_MEMORY = "Out of memory";
+
+static char* polycall_strdup(const char* source) {
+    if (!source) return NULL;
+
+    size_t length = strlen(source) + 1;
+    char* copy = malloc(length);
+    if (!copy) return NULL;
+
+    memcpy(copy, source, length);
+    return copy;
+}
 
 // Default configuration
 const PolycallTokenizerConfig POLYCALL_TOKENIZER_DEFAULT_CONFIG = {
@@ -54,6 +68,15 @@ static void set_error_state(PolycallTokenizer* tokenizer, const char* message) {
         tokenizer->state.error_message = polycall_strdup(ERROR_OUT_OF_MEMORY);
     }
 
+    }
+
+    const char* source_message = message ? message : ERROR_INVALID_INPUT;
+    tokenizer->state.error_message = polycall_strdup(source_message);
+    if (!tokenizer->state.error_message) {
+        tokenizer->state.error_message = polycall_strdup(ERROR_OUT_OF_MEMORY);
+    }
+
+    tokenizer->state.error_message = polycall_strdup(message);
     tokenizer->state.error_count++;
 }
 
@@ -460,4 +483,5 @@ PolycallTokenizerState polycall_tokenizer_get_state(
     const PolycallTokenizer* tokenizer
 ) {
     return tokenizer ? tokenizer->state.current : TOKENIZER_STATE_ERROR;
+}
 }
