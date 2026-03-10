@@ -1,133 +1,110 @@
-# Compiler and flags
-CC := gcc
-CFLAGS := -Wall -Wextra -I./include -fPIC
-LDFLAGS := -pthread -lssl -lcrypto
+# Cross-platform GNU Makefile for libpolycall
 
-# Platform-specific settings
-ifeq ($(OS),Windows_NT)
-    LDFLAGS += -lws2_32
-    CFLAGS += -D_WIN32 -DPOLYCALL_DLL_EXPORT
-    SHARED_EXT := dll
-    EXE_EXT := .exe
-else
-    SHARED_EXT := so
-    EXE_EXT :=
-endif
+# Toolchain
+CC ?= gcc
+AR ?= ar
 
-# Debug/Release flags
-DEBUG_FLAGS := -g -DDEBUG
-RELEASE_FLAGS := -O2 -DNDEBUG
-
-# Directories
+# Project layout
 SRC_DIR := src
 INC_DIR := include
 BUILD_DIR := build
-LIB_DIR := lib
-BIN_DIR := bin
+OBJ_DIR := $(BUILD_DIR)/obj
+LIB_DIR := $(BUILD_DIR)/lib
+BIN_DIR := $(BUILD_DIR)/bin
 
-# Source files
+# Sources
 SRCS := $(wildcard $(SRC_DIR)/*.c)
-OBJS := $(SRCS:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o)
+OBJS := $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
-
-# Main executable
 MAIN_SRC := main.c
-MAIN_OBJ := $(BUILD_DIR)/main.o
-EXECUTABLE := polycall$(EXE_EXT)
+MAIN_OBJ := $(OBJ_DIR)/main.o
 
-# Library name
+# Base flags
+CPPFLAGS ?= -I./$(INC_DIR)
+CFLAGS ?= -Wall -Wextra
+LDFLAGS ?=
+LDLIBS ?= -pthread -lssl -lcrypto
+
+# Platform-specific settings
+ifeq ($(OS),Windows_NT)
+    EXE_EXT := .exe
+    SHARED_EXT := dll
+    SHARED_FLAG := -shared
+    LDLIBS += -lws2_32
+    CPPFLAGS += -D_WIN32 -DPOLYCALL_DLL_EXPORT
+
+    # cmd.exe-friendly commands
+    MKDIR_P = if not exist "$(subst /,\\,$(1))" mkdir "$(subst /,\\,$(1))"
+    RM_RF = if exist "$(subst /,\\,$(1))" rmdir /S /Q "$(subst /,\\,$(1))"
+else
+    EXE_EXT :=
+    SHARED_EXT := so
+    SHARED_FLAG := -shared
+
+    MKDIR_P = mkdir -p "$(1)"
+    RM_RF = rm -rf "$(1)"
+endif
+
+# Outputs
 LIB_NAME := libpolycall
 STATIC_LIB := $(LIB_DIR)/$(LIB_NAME).a
 SHARED_LIB := $(LIB_DIR)/$(LIB_NAME).$(SHARED_EXT)
+EXECUTABLE := $(BIN_DIR)/polycall$(EXE_EXT)
 
-# Installation paths
-PREFIX := /usr/local
-INSTALL_INC_DIR := $(PREFIX)/include/$(LIB_NAME)
-INSTALL_LIB_DIR := $(PREFIX)/lib
-INSTALL_BIN_DIR := $(PREFIX)/bin
+# Build variants
+DEBUG_FLAGS := -g -DDEBUG
+RELEASE_FLAGS := -O2 -DNDEBUG
 
-# Default target
-.PHONY: all
-all: dirs $(STATIC_LIB) $(SHARED_LIB) $(BIN_DIR)/$(EXECUTABLE)
+.PHONY: all debug release static shared bin clean distclean dirs help
 
-# Create necessary directories
-.PHONY: dirs
-dirs:
-	@mkdir -p $(BUILD_DIR) $(LIB_DIR) $(BIN_DIR)
+all: dirs static shared bin
 
-# Debug build
-.PHONY: debug
 debug: CFLAGS += $(DEBUG_FLAGS)
 debug: all
 
-# Release build
-.PHONY: release
 release: CFLAGS += $(RELEASE_FLAGS)
 release: all
 
-# Compile source files
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+static: dirs $(STATIC_LIB)
 
-# Compile main executable
-$(BUILD_DIR)/main.o: $(MAIN_SRC)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+shared: dirs $(SHARED_LIB)
 
-# Create static library
+bin: dirs $(EXECUTABLE)
+
+dirs:
+	@$(call MKDIR_P,$(BUILD_DIR))
+	@$(call MKDIR_P,$(OBJ_DIR))
+	@$(call MKDIR_P,$(LIB_DIR))
+	@$(call MKDIR_P,$(BIN_DIR))
+
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -MMD -MP -c $< -o $@
+
+$(MAIN_OBJ): $(MAIN_SRC)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -MMD -MP -c $< -o $@
+
 $(STATIC_LIB): $(OBJS)
-	ar rcs $@ $^
+	$(AR) rcs $@ $^
 
-# Create shared library
 $(SHARED_LIB): $(OBJS)
-	$(CC) -shared -o $@ $^ $(LDFLAGS)
+	$(CC) $(SHARED_FLAG) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-# Link executable
-$(BIN_DIR)/$(EXECUTABLE): $(MAIN_OBJ) $(STATIC_LIB)
-	$(CC) $^ -o $@ $(LDFLAGS) -L$(LIB_DIR) -l:$(LIB_NAME).a
+$(EXECUTABLE): $(MAIN_OBJ) $(STATIC_LIB)
+	$(CC) -o $@ $(MAIN_OBJ) $(STATIC_LIB) $(LDFLAGS) $(LDLIBS)
 
-# Install (Unix-like systems only)
-.PHONY: install
-install: all
-ifneq ($(OS),Windows_NT)
-	@mkdir -p $(INSTALL_INC_DIR)
-	@mkdir -p $(INSTALL_LIB_DIR)
-	@mkdir -p $(INSTALL_BIN_DIR)
-	cp $(INC_DIR)/*.h $(INSTALL_INC_DIR)
-	cp $(STATIC_LIB) $(SHARED_LIB) $(INSTALL_LIB_DIR)
-	cp $(BIN_DIR)/$(EXECUTABLE) $(INSTALL_BIN_DIR)
-	ldconfig
-endif
-
-# Uninstall (Unix-like systems only)
-.PHONY: uninstall
-uninstall:
-ifneq ($(OS),Windows_NT)
-	rm -rf $(INSTALL_INC_DIR)
-	rm -f $(INSTALL_LIB_DIR)/$(LIB_NAME).*
-	rm -f $(INSTALL_BIN_DIR)/$(EXECUTABLE)
-endif
-
-# Clean build files
-.PHONY: clean
 clean:
-	rm -rf $(BUILD_DIR) $(LIB_DIR) $(BIN_DIR)
+	@$(call RM_RF,$(BUILD_DIR))
 
-# Clean everything including installed files
-.PHONY: distclean
-distclean: clean uninstall
+distclean: clean
 
-# Include dependency files
--include $(DEPS)
+-include $(DEPS) $(MAIN_OBJ:.o=.d)
 
-# Help target
-.PHONY: help
 help:
 	@echo "Available targets:"
-	@echo "  all        - Build everything (default)"
-	@echo "  debug      - Build with debug flags"
-	@echo "  release    - Build with release flags"
-	@echo "  clean      - Remove build files"
-	@echo "  install    - Install libraries and headers (Unix-like only)"
-	@echo "  uninstall  - Remove installed files (Unix-like only)"
-	@echo "  distclean  - Remove all generated files"
-	@echo "  help       - Show this help message"
+	@echo "  all     - Build static lib, shared lib, and executable"
+	@echo "  debug   - Build all targets with debug flags"
+	@echo "  release - Build all targets with release flags"
+	@echo "  static  - Build static library ($(STATIC_LIB))"
+	@echo "  shared  - Build shared library ($(SHARED_LIB))"
+	@echo "  bin     - Build executable ($(EXECUTABLE))"
+	@echo "  clean   - Remove build artifacts"
