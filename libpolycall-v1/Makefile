@@ -32,6 +32,7 @@ ifeq ($(OS),Windows_NT)
     SHARED_EXT := dll
     SHARED_FLAG := -shared
     PLATFORM_LIBS += -lws2_32
+    LDLIBS += -lws2_32
     CPPFLAGS += -D_WIN32 -DPOLYCALL_DLL_EXPORT
 
     # cmd.exe-friendly commands
@@ -92,6 +93,10 @@ $(SHARED_LIB): $(OBJS)
 
 $(EXECUTABLE): $(MAIN_OBJ) $(STATIC_LIB)
 	$(CC) -o $@ $(MAIN_OBJ) $(STATIC_LIB) $(LDFLAGS) $(LDLIBS) $(PLATFORM_LIBS)
+	$(CC) $(SHARED_FLAG) -o $@ $^ $(LDFLAGS) $(LDLIBS)
+
+$(EXECUTABLE): $(MAIN_OBJ) $(STATIC_LIB)
+	$(CC) -o $@ $(MAIN_OBJ) $(STATIC_LIB) $(LDFLAGS) $(LDLIBS)
 
 clean:
 	@$(call RM_RF,$(BUILD_DIR))
