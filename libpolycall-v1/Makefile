@@ -24,12 +24,14 @@ CPPFLAGS ?= -I./$(INC_DIR)
 CFLAGS ?= -Wall -Wextra
 LDFLAGS ?=
 LDLIBS ?= -pthread -lssl -lcrypto
+PLATFORM_LIBS :=
 
 # Platform-specific settings
 ifeq ($(OS),Windows_NT)
     EXE_EXT := .exe
     SHARED_EXT := dll
     SHARED_FLAG := -shared
+    PLATFORM_LIBS += -lws2_32
     LDLIBS += -lws2_32
     CPPFLAGS += -D_WIN32 -DPOLYCALL_DLL_EXPORT
 
@@ -87,6 +89,10 @@ $(STATIC_LIB): $(OBJS)
 	$(AR) rcs $@ $^
 
 $(SHARED_LIB): $(OBJS)
+	$(CC) $(SHARED_FLAG) -o $@ $^ $(LDFLAGS) $(LDLIBS) $(PLATFORM_LIBS)
+
+$(EXECUTABLE): $(MAIN_OBJ) $(STATIC_LIB)
+	$(CC) -o $@ $(MAIN_OBJ) $(STATIC_LIB) $(LDFLAGS) $(LDLIBS) $(PLATFORM_LIBS)
 	$(CC) $(SHARED_FLAG) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
 $(EXECUTABLE): $(MAIN_OBJ) $(STATIC_LIB)
