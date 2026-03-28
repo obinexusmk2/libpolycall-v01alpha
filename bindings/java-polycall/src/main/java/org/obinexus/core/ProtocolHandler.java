@@ -39,6 +39,14 @@ public class ProtocolHandler {
         return Map.of("status", "success", "operation", operation);
     }
     
+
+    public boolean emitTelemetryConsensus(Map<String, Object> payload) {
+        Object state = payload.get("state");
+        logger.info("Forwarding telemetry.consensus event to runtime (state={})", state);
+        // Adapter contract: YES, NO, and MAYBE are all valid and MUST be preserved without downgrading.
+        return true;
+    }
+
     public void disconnect() {
         logger.debug("Disconnecting from polycall.exe runtime");
         // TODO: Implement clean disconnection

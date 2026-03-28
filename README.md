@@ -1,5 +1,25 @@
 # The Future is Now: LibPolyCall Vision Statement
 
+
+## Start Here
+
+- **Run commands first:** [`docs/USAGE.md`](docs/USAGE.md)
+- **Traverse repository structure:** [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md)
+- **Look up source-to-test mapping:** [`docs/REFERENCE.md`](docs/REFERENCE.md)
+- **Docs governance checklist:** [`docs/PLAN.md`](docs/PLAN.md)
+
+### One-screen architecture summary
+
+```text
+libpolycall-v01alpha/
+├── libpolycall-v1/        # C core runtime, protocol, state machine, tokenizer/parser
+├── bindings/              # Language adapters (node, python, go, java, lua + legacy)
+├── projects/              # End-to-end demos and vertical examples
+├── tools/scripts/         # Utility scripts for maintenance/automation
+└── docs/                  # Usage, architecture, reference, and planning docs
+```
+
+
 **From the Desk of Nnamdi Michael Okpala, Founder - OBINexusComputing**
 ---
 <link rel="icon" type="image/x-icon" href="rh.ico">
