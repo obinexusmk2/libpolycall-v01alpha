@@ -71,10 +71,13 @@ debug: all
 release: CFLAGS += $(RELEASE_FLAGS)
 release: all
 
+# static output: build/lib/libpolycall.a
 static: dirs $(STATIC_LIB)
 
+# shared output: build/lib/libpolycall.$(SHARED_EXT)
 shared: dirs $(SHARED_LIB)
 
+# bin output: build/bin/polycall$(EXE_EXT)
 bin: dirs $(EXECUTABLE)
 
 dirs:
