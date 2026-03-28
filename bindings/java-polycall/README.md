@@ -20,6 +20,42 @@ Java PolyCall is an **ADAPTER BINDING** for the LibPolyCall Trial v1 runtime sys
 
 ---
 
+
+## Native Bridge Constraints (JNI + C Adapter)
+
+The native bridge currently provides **lifecycle validation and deterministic error propagation**, but does **not** yet include a full transport implementation to `polycall.exe`.
+
+### Current Native Behavior
+- `polycall_init(host, port)` validates inputs and stores runtime target state.
+- `polycall_connect`, `polycall_authenticate`, and `polycall_execute` return explicit **not implemented** until runtime transport wiring is completed.
+- JNI layer mirrors native codes and adds `ERR_NATIVE_LIBRARY_UNAVAILABLE` when the JNI library cannot be loaded.
+- Java `NativeBinding` enforces ordering (`init -> connect -> authenticate -> execute`) and returns stable guard errors before dispatch.
+
+### Error Code Contract
+| Code | Name | Meaning |
+|---|---|---|
+| 0 | `OK` | Success |
+| 1 | `ERR_INVALID_ARGUMENT` | Invalid input |
+| 2 | `ERR_NOT_INITIALIZED` | `init` not completed |
+| 3 | `ERR_CONNECTION_FAILED` | Transport connection failed |
+| 4 | `ERR_NOT_CONNECTED` | Runtime session not connected |
+| 5 | `ERR_AUTH_FAILED` | Authentication rejected |
+| 6 | `ERR_NOT_AUTHENTICATED` | Auth required before execution |
+| 7 | `ERR_EXECUTION_FAILED` | Runtime operation failed |
+| 100 | `ERR_NOT_IMPLEMENTED` | Native bridge feature intentionally stubbed |
+| 101 | `ERR_NATIVE_LIBRARY_UNAVAILABLE` | JNI library missing/not loadable |
+
+### Testing Mode
+Integration tests run in deterministic mock JNI mode using:
+
+```bash
+-Dpolycall.ffi.mock=true
+```
+
+This mode validates lifecycle and error behavior without requiring a built JNI shared library.
+
+---
+
 ## Quick Start Guide
 
 ### Prerequisites
