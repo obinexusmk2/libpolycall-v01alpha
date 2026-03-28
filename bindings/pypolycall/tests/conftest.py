@@ -7,6 +7,8 @@ import pytest
 import asyncio
 import os
 
+pytest_plugins = ["tests.fixtures.human_loop"]
+
 # Test configuration
 POLYCALL_TEST_HOST = os.getenv("POLYCALL_TEST_HOST", "localhost")
 POLYCALL_TEST_PORT = int(os.getenv("POLYCALL_TEST_PORT", "8084"))

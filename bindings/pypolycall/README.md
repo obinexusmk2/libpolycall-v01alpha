@@ -416,6 +416,26 @@ pytest tests/protocol/ -v
 pytest tests/ -v --cov=pypolycall
 ```
 
+
+### Fixture Guide (Human-loop Flows)
+
+Use reusable fixtures from `tests/fixtures/human_loop.py` for indecision and pending-path protocol tests:
+
+```python
+# tests/integration/protocol/test_example.py
+def test_pending_timeout(flow_builder, maybe_event, non_response_factory, flow_evaluator):
+    flow = flow_builder(maybe_event, non_response_factory(timeout_seconds=30, retries=2))
+    result = flow_evaluator(flow)
+
+    assert result["final_state"] == "PENDING_TIMEOUT"
+```
+
+Available composable factories:
+- `decision_factory("YES"|"NO"|"MAYBE")` plus shorthand fixtures `yes_event`, `no_event`, `maybe_event`
+- `delayed_ack_factory(delay_seconds=..., ack=True|False)`
+- `non_response_factory(timeout_seconds=..., retries=...)`
+- `flow_builder(*events, flow_id=...)` + `flow_evaluator(flow)` to validate transitions and telemetry
+
 ### Development Workflow
 
 ```bash
