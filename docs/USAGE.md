@@ -158,3 +158,40 @@ echo "port=3004:8084" > /opt/polycall/services/newlang/.polycallrc
 3. Restart the PolyCall service to apply the new configuration.
 
 This setup allows PolyCall to act as a central coordinator for all your language bindings while maintaining clean separation between services.
+---
+
+## Tooling Scripts
+
+Use the following scripts to generate deterministic reference artifacts:
+
+### Analyze components
+
+```bash
+python3 tools/scripts/analyze_components.py \
+  --output-json docs/generated/component_inventory.json \
+  --output-markdown docs/generated/component_inventory.md
+```
+
+Outputs:
+- `docs/generated/component_inventory.json`
+- `docs/generated/component_inventory.md`
+
+### Generate docs traversal index
+
+```bash
+python3 tools/scripts/generate_docs_index.py \
+  --output-markdown docs/generated/docs_index.md \
+  --output-json docs/generated/docs_index.json
+```
+
+Outputs:
+- `docs/generated/docs_index.md`
+- `docs/generated/docs_index.json`
+
+### Run modular tests
+
+```bash
+python3 -m unittest discover -s tools/tests -p 'test_*.py'
+```
+
+This test suite validates deterministic output generation and fixture-based decision-state handling (including `maybe` and `unresolved` scenarios).

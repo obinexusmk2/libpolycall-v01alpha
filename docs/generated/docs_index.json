@@ -1,0 +1,58 @@
+{
+  "counts": {
+    "decision_states": 5,
+    "docs": 5
+  },
+  "decision_fixture": "tests/fixtures/decision_states.json",
+  "decision_states_by_status": {
+    "maybe": [
+      {
+        "id": "DEC-003",
+        "note": "Pending SRE confidence metrics after canary.",
+        "owner": "release-team",
+        "status": "maybe",
+        "title": "Introduce maybe-state rollout flag"
+      }
+    ],
+    "resolved": [
+      {
+        "id": "DEC-001",
+        "note": "Approved for all repositories.",
+        "owner": "docs-team",
+        "status": "resolved",
+        "title": "Adopt docs index generator"
+      },
+      {
+        "id": "DEC-004",
+        "note": "Completed in v1 alpha branch.",
+        "owner": "core-runtime",
+        "status": "resolved",
+        "title": "Standardize C header naming"
+      }
+    ],
+    "unresolved": [
+      {
+        "id": "DEC-002",
+        "note": "Awaiting impact analysis for enterprise users.",
+        "owner": "platform-team",
+        "status": "unresolved",
+        "title": "Deprecate legacy node binding"
+      },
+      {
+        "id": "DEC-005",
+        "note": "Need confirmation from docs owners.",
+        "owner": "repo-maintainers",
+        "status": "unresolved",
+        "title": "Archive migration_backup examples"
+      }
+    ]
+  },
+  "docs": [
+    "docs/FEATURES.md",
+    "docs/PLAN.md",
+    "docs/TRIAL.md",
+    "docs/USAGE.md",
+    "docs/architecture/ARCHITECTURE.md"
+  ],
+  "repo_root": "libpolycall-v01alpha"
+}
