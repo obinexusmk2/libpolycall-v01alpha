@@ -32,6 +32,7 @@ try:
     from .core.binding import ProtocolBinding
     from .core.protocol import ProtocolHandler, MessageTypes, StateTransitions
     from .core.telemetry import TelemetryObserver, MetricsCollector
+    from .protocol.constants import DEFAULT_POLYCALL_HOST, DEFAULT_POLYCALL_PORT
 except ImportError as e:
     warnings.warn(f"PyPolyCall core components incomplete: {e}", ImportWarning)
     ProtocolBinding = None
@@ -40,6 +41,8 @@ except ImportError as e:
     StateTransitions = None
     TelemetryObserver = None
     MetricsCollector = None
+    DEFAULT_POLYCALL_HOST = None
+    DEFAULT_POLYCALL_PORT = None
 
 # CLI imports with error handling
 try:
@@ -74,6 +77,8 @@ __all__ = [
     "StateTransitions",
     "TelemetryObserver",
     "MetricsCollector",
+    "DEFAULT_POLYCALL_HOST",
+    "DEFAULT_POLYCALL_PORT",
     
     # CLI components
     "CLI",
