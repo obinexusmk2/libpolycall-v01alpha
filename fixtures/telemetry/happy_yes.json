@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "scenario_id": "telemetry.happy_yes",
+  "domain": "telemetry",
+  "decision": "YES",
+  "status": "approved",
+  "includes": [
+    "ack_on_first_emit.yaml"
+  ],
+  "input": {
+    "stream": "runtime.metrics",
+    "event": "flush"
+  },
+  "expected": {
+    "ack_received": true,
+    "retry_count": 0
+  }
+}

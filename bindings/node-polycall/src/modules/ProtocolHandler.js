@@ -16,8 +16,16 @@ const MESSAGE_TYPES = {
     COMMAND: 0x03,
     RESPONSE: 0x04,
     ERROR: 0x05,
-    HEARTBEAT: 0x06
+    HEARTBEAT: 0x06,
+    CONSENSUS_ECHO: 0x07,
+    CONSENSUS_ACK: 0x08
 };
+
+const TRINARY_DECISION = Object.freeze({
+    NO: 'no',
+    MAYBE: 'maybe',
+    YES: 'yes'
+});
 
 const PROTOCOL_FLAGS = {
     NONE: 0x00,
@@ -54,6 +62,8 @@ class ProtocolHandler extends EventEmitter {
         this.pendingMessages.clear();
         this.incomingQueue = [];
         this.outgoingQueue = [];
+        this.consensusState = TRINARY_DECISION.MAYBE;
+        this.consensusMaybePersisted = false;
     }
 
     // Header creation and validation
@@ -146,6 +156,10 @@ class ProtocolHandler extends EventEmitter {
                 return await this.handleError(header, payload);
             case MESSAGE_TYPES.HEARTBEAT:
                 return await this.handleHeartbeat(header, payload);
+            case MESSAGE_TYPES.CONSENSUS_ECHO:
+                return await this.handleConsensusEcho(header, payload);
+            case MESSAGE_TYPES.CONSENSUS_ACK:
+                return await this.handleConsensusAck(header, payload);
             default:
                 throw new Error(`Unknown message type: ${header.type}`);
         }
@@ -201,6 +215,52 @@ class ProtocolHandler extends EventEmitter {
         this.emit('heartbeat', { sequence: header.sequence, timestamp: this.lastHeartbeat });
     }
 
+    async handleConsensusEcho(header, payload) {
+        const data = JSON.parse(payload.toString());
+        this.consensusState = data.state;
+        this.consensusMaybePersisted = data.state === TRINARY_DECISION.MAYBE && !!data.persisted;
+        this.emit('consensus:echo', { sequence: header.sequence, ...data });
+
+        return this.createMessage(
+            MESSAGE_TYPES.CONSENSUS_ACK,
+            JSON.stringify({
+                state: this.consensusState,
+                correlationId: header.sequence,
+                persisted: this.consensusMaybePersisted
+            }),
+            PROTOCOL_FLAGS.RELIABLE
+        );
+    }
+
+    async handleConsensusAck(header, payload) {
+        const data = JSON.parse(payload.toString());
+        this.consensusState = data.state;
+        this.consensusMaybePersisted = data.state === TRINARY_DECISION.MAYBE && !!data.persisted;
+        this.emit('consensus:ack', { sequence: header.sequence, ...data });
+    }
+
+    async sendConsensusEcho(state, correlationId = 0) {
+        if (!Object.values(TRINARY_DECISION).includes(state)) {
+            throw new Error(`Invalid trinary decision: ${state}`);
+        }
+
+        const persisted = state === TRINARY_DECISION.MAYBE;
+        this.consensusState = state;
+        this.consensusMaybePersisted = persisted;
+        return this.sendMessage(
+            MESSAGE_TYPES.CONSENSUS_ECHO,
+            JSON.stringify({ state, correlationId, persisted }),
+            PROTOCOL_FLAGS.RELIABLE
+        );
+    }
+
+    getConsensusState() {
+        return {
+            state: this.consensusState,
+            maybePersisted: this.consensusMaybePersisted
+        };
+    }
+
     // Utility functions
     calculateChecksum(data) {
         if (typeof data === 'string') {
@@ -248,5 +308,6 @@ module.exports = {
     ProtocolHandler,
     PROTOCOL_CONSTANTS,
     MESSAGE_TYPES,
-    PROTOCOL_FLAGS
+    PROTOCOL_FLAGS,
+    TRINARY_DECISION
 };

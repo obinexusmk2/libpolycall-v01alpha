@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include "polycall.h"
+#include "polycall_decision.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -57,6 +58,8 @@ typedef struct PolyCall_StateMachine {
         unsigned int integrity_violations;
         uint64_t last_verification;
     } diagnostics;
+    polycall_decision_t state_decisions[POLYCALL_MAX_STATES];
+    bool allow_forced_binary_collapse;
 } PolyCall_StateMachine;
 
 // Status codes
@@ -156,6 +159,35 @@ polycall_sm_status_t polycall_sm_get_state_diagnostics(
     const PolyCall_StateMachine* sm,
     unsigned int state_id,
     PolyCall_StateDiagnostics* diagnostics
+);
+
+
+polycall_sm_status_t polycall_sm_set_state_decision(
+    PolyCall_StateMachine* sm,
+    unsigned int state_id,
+    polycall_decision_t decision
+);
+
+polycall_sm_status_t polycall_sm_get_state_decision(
+    const PolyCall_StateMachine* sm,
+    unsigned int state_id,
+    polycall_decision_t* decision
+);
+
+polycall_sm_status_t polycall_sm_state_is_unresolved(
+    const PolyCall_StateMachine* sm,
+    unsigned int state_id,
+    bool* is_unresolved
+);
+
+polycall_sm_status_t polycall_sm_set_binary_collapse_policy(
+    PolyCall_StateMachine* sm,
+    bool allow
+);
+
+polycall_sm_status_t polycall_sm_force_binary_collapse(
+    PolyCall_StateMachine* sm,
+    polycall_decision_t collapse_to
 );
 
 void polycall_sm_destroy(PolyCall_StateMachine* sm);

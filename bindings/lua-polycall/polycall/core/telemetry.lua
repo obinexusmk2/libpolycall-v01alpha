@@ -12,6 +12,14 @@ All telemetry collection is non-intrusive and maintains zero-trust principles.
 
 local telemetry = {}
 
+telemetry.CONSENSUS_STATES = {
+    YES = "YES",
+    NO = "NO",
+    MAYBE = "MAYBE"
+}
+
+telemetry.CONSENSUS_EVENT_TYPE = "telemetry.consensus"
+
 -- Import logging utilities
 local logger = require('polycall.utils.logger')
 
@@ -30,7 +38,8 @@ telemetry.EVENT_TYPES = {
     PROTOCOL_ERROR = "protocol_error",
     HEARTBEAT_SENT = "heartbeat_sent",
     SESSION_START = "session_start",
-    SESSION_END = "session_end"
+    SESSION_END = "session_end",
+    TELEMETRY_CONSENSUS = "telemetry.consensus"
 }
 
 -- Telemetry observer constructor
@@ -74,8 +83,20 @@ function telemetry.observe_protocol_event(observer, event_type, event_data)
         return false
     end
     
-    -- Validate event type
-    if not telemetry.EVENT_TYPES[event_type:upper()] then
+    -- Validate event type by key or canonical value
+    local normalized_key = event_type and event_type:upper() or ""
+    local is_known_event = telemetry.EVENT_TYPES[normalized_key] ~= nil
+
+    if not is_known_event then
+        for _, known_event in pairs(telemetry.EVENT_TYPES) do
+            if known_event == event_type then
+                is_known_event = true
+                break
+            end
+        end
+    end
+
+    if not is_known_event then
         logger.warn(string.format("Unknown telemetry event type: %s", event_type))
         return false
     end
@@ -122,6 +143,63 @@ function telemetry.observe_protocol_event(observer, event_type, event_data)
     end
     
     return true
+end
+
+function telemetry.normalize_consensus_state(state)
+    if not state then
+        return nil
+    end
+
+    local normalized = string.upper(tostring(state))
+    if telemetry.CONSENSUS_STATES[normalized] then
+        return normalized
+    end
+
+    return nil
+end
+
+function telemetry.build_consensus_event(state, session_id, ack_status, persisted, storage_key)
+    local normalized_state = telemetry.normalize_consensus_state(state)
+    if not normalized_state then
+        return nil, "Invalid consensus state. Expected yes|no|maybe"
+    end
+
+    if not session_id or session_id == "" then
+        return nil, "Session id is required"
+    end
+
+    local normalized_ack = string.lower(tostring(ack_status or "pending"))
+
+    return {
+        event_type = telemetry.CONSENSUS_EVENT_TYPE,
+        state = normalized_state,
+        session_id = session_id,
+        ack_status = normalized_ack,
+        persisted = persisted == true,
+        storage_key = storage_key,
+        timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+    }, nil
+end
+
+function telemetry.observe_consensus_event(observer, payload)
+    if not payload then
+        return false, "Payload is required"
+    end
+
+    local normalized_state = telemetry.normalize_consensus_state(payload.state)
+    if not normalized_state then
+        return false, "Consensus state is required and must be YES|NO|MAYBE"
+    end
+
+    payload.state = normalized_state
+    payload.event_type = telemetry.CONSENSUS_EVENT_TYPE
+
+    local recorded = telemetry.observe_protocol_event(observer, telemetry.EVENT_TYPES.TELEMETRY_CONSENSUS, payload)
+    if not recorded then
+        return false, "Failed to record consensus observation"
+    end
+
+    return true, nil
 end
 
 -- Generate unique observation ID
