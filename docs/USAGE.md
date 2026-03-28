@@ -158,3 +158,41 @@ echo "port=3004:8084" > /opt/polycall/services/newlang/.polycallrc
 3. Restart the PolyCall service to apply the new configuration.
 
 This setup allows PolyCall to act as a central coordinator for all your language bindings while maintaining clean separation between services.
+## Generate code traversal docs
+
+Use the dedicated static analysis workflow under `tools/scripts/v1-analysis/` to build deterministic, repo-relative mapping artifacts and render `docs/REFERENCE.md`.
+
+1. Generate JSON and CSV artifacts:
+
+```bash
+python3 tools/scripts/v1-analysis/index_repo_map.py
+```
+
+Artifacts are written to `tools/scripts/v1-analysis/artifacts/`:
+
+- `repo-map.json`
+- `repo-map.csv`
+
+2. Render markdown reference docs from the JSON artifact:
+
+```bash
+python3 tools/scripts/v1-analysis/render_reference_md.py
+```
+
+This overwrites `docs/REFERENCE.md` with deterministic sections for:
+
+- `libpolycall-v1/src/*.c`
+- `libpolycall-v1/include/*.h`
+- binding entry points under `bindings/*`
+
+### CI-friendly usage
+
+Both scripts emit repo-relative paths and stable ordering, so docs can be regenerated consistently in CI from repository root:
+
+```bash
+python3 tools/scripts/v1-analysis/index_repo_map.py \
+  --out-dir tools/scripts/v1-analysis/artifacts
+python3 tools/scripts/v1-analysis/render_reference_md.py \
+  --artifact tools/scripts/v1-analysis/artifacts/repo-map.json \
+  --out docs/REFERENCE.md
+```
