@@ -1,120 +1,43 @@
-# LibPolyCall v1 Usage Guide
+# Usage: practical "how to run"
 
-This guide documents the **current, deterministic** usage flow for the C runtime in `libpolycall-v1/`.
+This guide only includes commands validated from the repository root (`/workspace/libpolycall-v01alpha`) in this environment.
 
-## 1) Build and run `libpolycall-v1`
-
-From repository root:
+## 1) Run the prebuilt core CLI (`libpolycall-v1`)
 
 ```bash
-cd libpolycall-v1
-make clean
-make bin
+chmod +x libpolycall-v1/bin/polycall
+printf 'help\nquit\n' | libpolycall-v1/bin/polycall
 ```
 
-This produces the runtime executable at:
+What this does:
+- marks the bundled CLI binary executable,
+- starts it,
+- prints command help,
+- exits cleanly.
 
-- `libpolycall-v1/build/bin/polycall`
-
-Run in interactive mode:
+## 2) Smoke test the Python binding tests (`bindings/pypolycall`)
 
 ```bash
-./build/bin/polycall
+pytest -q bindings/pypolycall/tests/unit/config/test_manager.py
 ```
 
-Run in non-interactive mode (config-driven):
+## 3) Smoke test the Node.js binding module export (`bindings/node-polycall`)
 
 ```bash
-./build/bin/polycall -f config.Polycallfile
+node -e "const m=require('./bindings/node-polycall/src/index.js'); console.log(Object.keys(m))"
 ```
 
----
+Expected result: a list of exported modules such as `PolyCallClient`, `Router`, and `ProtocolHandler`.
 
-## 2) `config.Polycallfile` semantics
-
-`main.c` currently parses only a **small command subset** when started with `-f`.
-
-### Supported directives
-
-- `port <host>:<container>`
-  - Example: `port 8080:8084`
-  - Runtime behavior: stores the container side (`8084`) as the active listening port.
-- `network start`
-  - Starts network services using the active port.
-
-### Parsing behavior and constraints
-
-- Blank lines and lines beginning with `#` are ignored.
-- Directives are parsed token-by-token (`<command> <value>`).
-- Unknown directives are ignored in non-interactive mode.
-- If `network start` is never encountered, the runtime warns and stays without active network services.
-
-> Note: The sample `config.Polycallfile` includes additional keys (`server`, `network_timeout`, etc.). Those values are not consumed by the non-interactive parser path in `main.c` today.
-
----
-
-## 3) Interactive vs non-interactive flow
-
-## Interactive flow (no `-f`)
-
-Start:
+## 4) Optional: inspect major docs quickly
 
 ```bash
-./build/bin/polycall
+sed -n '1,160p' README.md
+sed -n '1,200p' docs/architecture/ARCHITECTURE.md
+sed -n '1,240p' docs/REFERENCE.md
 ```
 
-Then use CLI commands such as:
+## Notes
 
-- `help`
-- `start_network`
-- `stop_network`
-- `list_endpoints`
-- `list_clients`
-- `init`
-- `add_state NAME`
-- `list_states`
-- `list_transitions`
-- `status`
-- `history`
-- `quit`
-
-This mode is best for exploratory debugging and state-machine experimentation.
-
-## Non-interactive flow (`-f config.Polycallfile`)
-
-Start:
-
-```bash
-./build/bin/polycall -f config.Polycallfile
-```
-
-Boot sequence:
-
-1. Runtime initializes core context/state.
-2. Config file is read line-by-line.
-3. `port` sets runtime port.
-4. `network start` initializes and registers a network program.
-5. Runtime enters its event loop (`net_run` in a loop) until interrupted.
-
-This mode is best for repeatable process startup and binding integration.
-
----
-
-## 4) Binding integration pointers
-
-Use these directories as the canonical entry points:
-
-- Node binding: `bindings/node-polycall/`
-  - Docs: `bindings/node-polycall/README.md`
-  - Example server: `bindings/node-polycall/examples/server.js`
-- Python binding: `bindings/pypolycall/`
-  - Docs: `bindings/pypolycall/README.md`
-
-### Typical local integration sequence
-
-1. Build runtime (`make bin` in `libpolycall-v1`).
-2. Start runtime (`./build/bin/polycall -f config.Polycallfile`).
-3. Start binding-side example/client in the target binding directory.
-4. Validate connect/auth/request flow from the binding README examples.
-
-If you add a new binding, keep the runtime startup unchanged and add binding-specific connection instructions in that binding's own README.
+- The build path exists at `libpolycall-v1/Makefile`, but in this repo snapshot `make -C libpolycall-v1 all` currently fails due duplicate/corrupted content in `libpolycall-v1/src/polycall_tokenizer.c`. That compile command is intentionally **not** part of the run baseline.
+- All paths in this guide are repo-relative.

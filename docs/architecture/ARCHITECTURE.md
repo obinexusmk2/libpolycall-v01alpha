@@ -1,60 +1,72 @@
-# LibPolyCall Repository Architecture (Current)
+# Repository Architecture
 
-This document reflects only directories and modules that exist in this repository snapshot.
-
-## Top-level layout
+Accurate repo-relative structure focused on onboarding and traversal.
 
 ```text
 .
-├── libpolycall-v1/          # Core C runtime and protocol/state/network implementation
-├── bindings/                # Language bindings (Node, Python, Go, Lua, Java)
-├── projects/                # Example vertical projects built around PolyCall concepts
-├── examples/                # Small cross-language client examples
-├── docs/                    # Documentation set
-├── tools/                   # Utility scripts
-├── ports/libpolycall/       # Packaging metadata (vcpkg port)
-├── images/                  # Repository images/assets
-└── LICENSE
+├── README.md
+├── docs/
+│   ├── USAGE.md
+│   ├── REFERENCE.md
+│   ├── PLAN.md
+│   ├── FEATURES.md
+│   ├── TRIAL.md
+│   └── architecture/
+│       └── ARCHITECTURE.md
+├── libpolycall-v1/
+│   ├── Makefile
+│   ├── main.c
+│   ├── config.Polycallfile
+│   ├── include/
+│   │   ├── polycall.h
+│   │   ├── polycall_protocol.h
+│   │   ├── polycall_state_machine.h
+│   │   ├── polycall_micro.h
+│   │   ├── polycall_parser.h
+│   │   ├── polycall_tokenizer.h
+│   │   └── network.h
+│   ├── src/
+│   │   ├── polycall.c
+│   │   ├── polycall_protocol.c
+│   │   ├── polycall_state_machine.c
+│   │   ├── polycall_micro.c
+│   │   ├── polycall_parser.c
+│   │   ├── polycall_tokenizer.c
+│   │   ├── polycall_token.c
+│   │   └── network.c
+│   ├── test/
+│   │   ├── test_polystate.c
+│   │   └── test_polystate_machine.c
+│   └── bin/
+│       └── polycall
+├── bindings/
+│   ├── node-polycall/
+│   ├── pypolycall/
+│   ├── go-polycall/
+│   ├── java-polycall/
+│   ├── lua-polycall/
+│   ├── node-polycall(outdated)/
+│   └── pypolycall-outdated/
+├── projects/
+│   ├── banking-system/
+│   ├── banking-secure-bridge/
+│   ├── telemetry-dashboard/
+│   └── edge-iot-mesh/
+├── tools/
+│   └── scripts/
+│       ├── clone_commit.py
+│       └── fix_for_powershell.ps1
+├── examples/
+├── ports/
+└── images/
 ```
 
-## Runtime core (`libpolycall-v1/`)
+## Traversal order (recommended)
 
-- `main.c`
-  - CLI entry point; interactive and `-f` non-interactive runtime flows.
-- `src/polycall.c`
-  - Core context lifecycle (`polycall_init_with_config`, `polycall_cleanup`).
-- `src/network.c`
-  - Network program/endpoints/client lifecycle.
-- `src/polycall_state_machine.c`
-  - State machine creation, states, transitions, execution.
-- `src/polycall_protocol.c`
-  - Protocol message handling and wire-level operations.
-- `include/`
-  - Public C headers consumed by runtime/tests and external integrations.
-- `test/`
-  - C tests for state/state-machine behavior.
-
-## Bindings (`bindings/`)
-
-- `node-polycall/` (JavaScript modules + examples)
-- `pypolycall/` (Python package and tests)
-- `go-polycall/` (Go package/config/examples)
-- `lua-polycall/` (Lua modules + CLI)
-- `java-polycall/` (Java binding + native JNI bridge)
-
-Repository also contains `*-outdated` directories; treat them as historical/reference rather than primary integration targets.
-
-## Example and project layers
-
-- `examples/`
-  - Lightweight language client examples (`.py`, `.js`, `.go`, `.lua`).
-- `projects/`
-  - Multi-file scenario projects (e.g., banking system, telemetry dashboard, edge IoT mesh, banking secure bridge).
-
-These are consumers of PolyCall ideas and integration patterns; the authoritative runtime implementation remains in `libpolycall-v1/`.
-
-## Documentation map
-
-- `docs/USAGE.md` – build/run and runtime operation.
-- `docs/TRAVERSAL.md` – source-level navigation map.
-- `docs/architecture/ARCHITECTURE.md` – this file.
+1. `README.md` (entrypoint)
+2. `docs/USAGE.md` (verified run commands)
+3. `docs/REFERENCE.md` (source/binding map)
+4. `libpolycall-v1/include/` then `libpolycall-v1/src/` (C API + implementation)
+5. `bindings/` (language adapters)
+6. `projects/` (end-to-end demos)
+7. `tools/scripts/` (maintenance utilities)

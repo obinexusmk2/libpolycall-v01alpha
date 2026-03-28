@@ -1,89 +1,95 @@
-# LibPolyCall Source Traversal
+# LibPolyCall Traversal Map
 
-Use this map to navigate from runtime internals to bindings and example consumers.
+This document maps the current repository tree so contributors can move from runtime internals to bindings and demos quickly.
 
-## 1) Core C runtime path
+## 1) Core C runtime (`libpolycall-v1/`)
 
-Start here for execution flow:
+## Entrypoint
 
-1. `libpolycall-v1/main.c`
-   - Process entrypoint.
-   - Chooses interactive CLI vs non-interactive `-f` config flow.
-   - Boots network programs and state machine lifecycle.
-2. `libpolycall-v1/src/network.c`
-   - Endpoint/client setup, runtime network loop helpers.
-3. `libpolycall-v1/src/polycall_state_machine.c`
-   - State definitions, transition registration, transition execution.
-4. `libpolycall-v1/src/polycall_protocol.c`
-   - Protocol framing/parsing and message-level behaviors.
+- `libpolycall-v1/main.c`  
+  Runtime bootstrap, command handlers, network hooks, and state-machine lifecycle integration.
 
-Recommended reading order is exactly the list above.
+## Runtime modules (`libpolycall-v1/src/*.c`)
 
----
+- `polycall.c` – core context lifecycle and shared runtime primitives.
+- `polycall_state_machine.c` – state creation, transitions, locking, snapshots.
+- `polycall_protocol.c` – protocol framing, handshake/validation paths.
+- `network.c` – socket and endpoint behavior.
+- `polycall_parser.c` – parser implementation for Polycall config/text inputs.
+- `polycall_tokenizer.c` and `polycall_token.c` – tokenization/token utilities.
+- `polycall_micro.c` – micro-runtime orchestration component.
 
-## 2) Public C headers (`libpolycall-v1/include/`)
+## Public headers (`libpolycall-v1/include/*.h`)
 
-These headers define the C-facing surface area:
+- `polycall.h`
+- `polycall_state_machine.h`
+- `polycall_protocol.h`
+- `network.h`
+- `polycall_parser.h`
+- `polycall_tokenizer.h`
+- `polycall_token.h`
+- `polycall_micro.h`
+- `polycall_file_parser.h`
 
-- `polycall.h` – core context and initialization API.
-- `network.h` – network program/endpoints/client API.
-- `polycall_state_machine.h` – state machine data types and operations.
-- `polycall_protocol.h` – protocol message and handler APIs.
-- `polycall_micro.h` – micro-runtime related interfaces.
-- `polycall_parser.h` – parser and AST APIs.
-- `polycall_file_parser.h` – file parser interfaces.
-- `polycall_token.h` – token/value structures.
-- `polycall_tokenizer.h` – tokenizer API.
+These headers define the runtime API and internal subsystem contracts used by `main.c` and the C modules.
 
-When adding runtime features, update header contracts first, then the corresponding `src/*.c` implementation.
+## 2) Bindings by language (`bindings/`)
 
----
+## Java (`bindings/java-polycall`)
 
-## 3) Binding directories
+- CLI/program entry: `src/main/java/org/obinexus/cli/Main.java`
+- Core adapter classes: `src/main/java/org/obinexus/core/`
+- FFI bridge classes: `src/main/java/org/obinexus/ffi/`
+- Native bridge layer: `native/src/polycall_bridge.c`
 
-Primary bindings in this repo:
+## Python (`bindings/pypolycall`)
 
-- `bindings/node-polycall/`
-  - `src/index.js` and `src/modules/*` implement JS client components.
-  - `examples/server.js` demonstrates runtime integration.
-- `bindings/pypolycall/`
-  - `pypolycall/` package contains Python adapter implementation.
-  - `tests/` contains binding tests.
+- Console entrypoint: `pypolycall.cli.main:main`
+- CLI module: `pypolycall/cli/main.py`
+- Core binding: `pypolycall/core/binding.py`
+- Config manager: `pypolycall/config/manager.py`
 
-Additional language bindings available:
+## Node.js (`bindings/node-polycall`)
 
-- `bindings/go-polycall/`
-- `bindings/lua-polycall/`
-- `bindings/java-polycall/`
+- Package entry: `src/index.js`
+- Core modules: `src/modules/`
+- Demo server: `examples/server.js`
 
----
+## Go (`bindings/go-polycall`)
 
-## 4) Example projects vs runtime
+- Core client package: `pkg/client.go`
+- Config support: `config/src/polycall_client.go`
+- Examples: `examples/test_client_api.go`
 
-### Top-level examples
+## Lua (`bindings/lua-polycall`)
 
-- `examples/test_client_api.{py,js,go,lua}`
-  - Minimal client-side usage patterns.
-  - Useful for quick protocol smoke tests.
+- CLI executable shim: `bin/lua-polycall`
+- CLI module: `polycall/cli/main.lua`
+- Runtime modules: `polycall/core/`, `polycall/config/`, `polycall/utils/`
 
-### Scenario projects
+## Legacy binding folders (intentional historical artifacts)
 
-- `projects/banking-system/`
-- `projects/telemetry-dashboard/`
-- `projects/edge-iot-mesh/`
-- `projects/banking-secure-bridge/`
+- `bindings/node-polycall(outdated)`
+- `bindings/pypolycall-outdated`
+- `bindings/pypolycall/backup_20250603_233522`
 
-Relationship to runtime:
+## 3) Demo projects and purpose (`projects/`)
 
-- These projects are **consumers** and demonstrations.
-- They do not replace `libpolycall-v1` as the authoritative runtime core.
-- Binding code acts as adapter layers between project logic and runtime protocol behavior.
+- `projects/banking-system`  
+  Banking workflow demo with Python server, templates, and tests.
 
----
+- `projects/banking-secure-bridge`  
+  Secure bridge demo emphasizing zero-trust/auth flows and mixed-language bindings.
 
-## 5) Fast onboarding sequence
+- `projects/edge-iot-mesh`  
+  Edge/mesh propagation demo (routing, conflict resolution, trigger updates).
 
-1. Read `libpolycall-v1/main.c`.
-2. Read `docs/USAGE.md` and run the runtime locally.
-3. Inspect `bindings/node-polycall/examples/server.js` or Python binding docs.
-4. Explore `examples/` and then `projects/` for end-to-end patterns.
+- `projects/telemetry-dashboard`  
+  Telemetry/CIR visualization demo with multi-language binding clients.
+
+## 4) Supporting navigation
+
+- `README.md` – repository landing page and quick documentation index.
+- `docs/PLAN.md` – docs index and suggested reading order.
+- `docs/USAGE.md` – build/run/config guide for `libpolycall-v1`.
+- `docs/architecture/ARCHITECTURE.md` – directory-level architecture map.
