@@ -20,6 +20,8 @@ public class ProtocolBinding {
     
     private boolean connected = false;
     private boolean authenticated = false;
+    private TrinaryDecision consensusState = TrinaryDecision.MAYBE;
+    private boolean maybePersisted = false;
     
     public ProtocolBinding(String host, int port) {
         this.polycallHost = host;
@@ -113,6 +115,21 @@ public class ProtocolBinding {
                 logger.error("Shutdown error", e);
             }
         });
+    }
+
+    public synchronized TrinaryDecision setConsensusState(TrinaryDecision decision) {
+        this.consensusState = decision;
+        this.maybePersisted = decision == TrinaryDecision.MAYBE;
+        telemetryObserver.recordEvent("consensus_state_changed", decision.wireValue());
+        return this.consensusState;
+    }
+
+    public synchronized TrinaryDecision getConsensusState() {
+        return consensusState;
+    }
+
+    public synchronized boolean isMaybePersisted() {
+        return maybePersisted;
     }
     
     // Getters

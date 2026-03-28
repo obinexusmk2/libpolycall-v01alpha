@@ -1,52 +1,72 @@
-# LibPolyCall Architecture Documentation
+# Repository Architecture
 
-## Project Structure Overview
+Accurate repo-relative structure focused on onboarding and traversal.
 
-This document outlines the systematic architecture of the LibPolyCall Trial implementation, maintaining clear separation of concerns between binding logic and application projects.
-
-### Directory Architecture
-
+```text
+.
+├── README.md
+├── docs/
+│   ├── USAGE.md
+│   ├── REFERENCE.md
+│   ├── PLAN.md
+│   ├── FEATURES.md
+│   ├── TRIAL.md
+│   └── architecture/
+│       └── ARCHITECTURE.md
+├── libpolycall-v1/
+│   ├── Makefile
+│   ├── main.c
+│   ├── config.Polycallfile
+│   ├── include/
+│   │   ├── polycall.h
+│   │   ├── polycall_protocol.h
+│   │   ├── polycall_state_machine.h
+│   │   ├── polycall_micro.h
+│   │   ├── polycall_parser.h
+│   │   ├── polycall_tokenizer.h
+│   │   └── network.h
+│   ├── src/
+│   │   ├── polycall.c
+│   │   ├── polycall_protocol.c
+│   │   ├── polycall_state_machine.c
+│   │   ├── polycall_micro.c
+│   │   ├── polycall_parser.c
+│   │   ├── polycall_tokenizer.c
+│   │   ├── polycall_token.c
+│   │   └── network.c
+│   ├── test/
+│   │   ├── test_polystate.c
+│   │   └── test_polystate_machine.c
+│   └── bin/
+│       └── polycall
+├── bindings/
+│   ├── node-polycall/
+│   ├── pypolycall/
+│   ├── go-polycall/
+│   ├── java-polycall/
+│   ├── lua-polycall/
+│   ├── node-polycall(outdated)/
+│   └── pypolycall-outdated/
+├── projects/
+│   ├── banking-system/
+│   ├── banking-secure-bridge/
+│   ├── telemetry-dashboard/
+│   └── edge-iot-mesh/
+├── tools/
+│   └── scripts/
+│       ├── clone_commit.py
+│       └── fix_for_powershell.ps1
+├── examples/
+├── ports/
+└── images/
 ```
-libpolycall-trial/
-├── bindings/                    # Language binding implementations
-│   ├── node-polycall/          # Node.js binding with core modules
-│   ├── pypolycall/             # Python binding with enhanced modules
-│   └── dual-polycall-experiment/ # Experimental dual-binding protocols
-├── projects/                    # Concrete use case implementations
-│   ├── banking-system/         # Financial transaction processing
-│   ├── todolist-manager/       # Task management system
-│   └── books-catalog/          # Library management system
-├── examples/                   # Language-specific test clients
-├── docs/                       # Comprehensive documentation
-└── tools/                      # Development and deployment utilities
-```
 
-### Separation of Concerns
+## Traversal order (recommended)
 
-**Binding Layer**: 
-- Core LibPolyCall communication protocols
-- Language-specific binding implementations
-- State management and synchronization
-- Zero-trust security enforcement
-
-**Application Layer**:
-- Concrete business logic implementations
-- Professional web interfaces
-- Database integration and management
-- Comprehensive testing frameworks
-
-### Development Workflow
-
-1. **Binding Development**: Enhance language-specific bindings in `bindings/`
-2. **Application Development**: Implement business logic in `projects/`
-3. **Integration Testing**: Validate binding-application communication
-4. **Production Deployment**: Systematic deployment using documented protocols
-
-### Technical Standards
-
-- **Code Quality**: Professional implementation standards with comprehensive error handling
-- **Testing**: Systematic test coverage for all components
-- **Documentation**: Clear documentation for all architectural components
-- **Security**: Zero-trust principles consistently applied across all layers
-
-Generated: 2025-06-01T04:11:53.099960
+1. `README.md` (entrypoint)
+2. `docs/USAGE.md` (verified run commands)
+3. `docs/REFERENCE.md` (source/binding map)
+4. `libpolycall-v1/include/` then `libpolycall-v1/src/` (C API + implementation)
+5. `bindings/` (language adapters)
+6. `projects/` (end-to-end demos)
+7. `tools/scripts/` (maintenance utilities)

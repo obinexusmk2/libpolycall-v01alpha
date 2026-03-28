@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "scenario_id": "consensus.rejection_no",
+  "domain": "consensus",
+  "decision": "NO",
+  "status": "rejected",
+  "includes": [
+    "decision_no.yaml"
+  ],
+  "input": {
+    "proposal_id": "proposal-beta",
+    "quorum": 3
+  },
+  "expected": {
+    "approval_count": 1,
+    "rejection_count": 2
+  }
+}

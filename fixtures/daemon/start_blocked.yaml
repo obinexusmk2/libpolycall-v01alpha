@@ -1,0 +1,3 @@
+behavior: start_blocked
+command_executed: false
+ack_received: false
