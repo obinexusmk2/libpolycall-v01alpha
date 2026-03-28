@@ -1,10 +1,8 @@
-"""
-Configuration Layer
-Unified Configuration Management for PyPolyCall
+"""Configuration Layer.
+
+Exports only modules that exist in this package layout.
 """
 
 from .manager import ConfigManager
-from .polycall_config import PolycallConfig
-from .schema import ConfigSchema
 
-__all__ = ["ConfigManager", "PolycallConfig", "ConfigSchema"]
+__all__ = ["ConfigManager"]
