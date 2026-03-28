@@ -8,10 +8,16 @@
 #include <string.h>
 #include <signal.h>
 #include <pthread.h>
+#include <errno.h>
 
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#else
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #endif
 
 #define PPI_VERSION "1.0.0"
@@ -36,6 +42,9 @@ typedef struct {
 typedef struct {
     bool interactive_mode;
     const char* config_file;
+    bool detach;
+    const char* pidfile;
+    const char* logfile;
     // Add other configuration fields as needed
 } RuntimeConfig;
 
@@ -54,6 +63,10 @@ typedef struct {
     bool has_snapshot[POLYCALL_MAX_STATES];
     PortMappingArray port_mappings;
     bool interactive_mode;
+    bool detached;
+    int pidfile_fd;
+    char pidfile_path[512];
+    int log_fd;
 #ifdef _WIN32
     bool wsaInitialized;
 #endif
@@ -339,6 +352,141 @@ static bool configure_network_port(NetworkProgram* program, uint16_t port) {
 }
 // Forward declarations
 static void register_signal_handlers(void);
+static bool daemonize_process(const char* working_dir, const char* pidfile, const char* logfile);
+
+#ifndef _WIN32
+static bool lock_and_write_pidfile(const char* pidfile_path, int* pidfile_fd) {
+    if (!pidfile_path || !pidfile_fd) {
+        return false;
+    }
+
+    int fd = open(pidfile_path, O_RDWR | O_CREAT, 0644);
+    if (fd == -1) {
+        fprintf(stderr, "Failed to open pidfile '%s': %s\n", pidfile_path, strerror(errno));
+        return false;
+    }
+
+    struct flock lock = {0};
+    lock.l_type = F_WRLCK;
+    lock.l_whence = SEEK_SET;
+    lock.l_start = 0;
+    lock.l_len = 0;
+    if (fcntl(fd, F_SETLK, &lock) == -1) {
+        fprintf(stderr, "Failed to lock pidfile '%s': %s\n", pidfile_path, strerror(errno));
+        close(fd);
+        return false;
+    }
+
+    if (ftruncate(fd, 0) == -1) {
+        fprintf(stderr, "Failed to truncate pidfile '%s': %s\n", pidfile_path, strerror(errno));
+        close(fd);
+        return false;
+    }
+
+    char pid_buf[32];
+    int len = snprintf(pid_buf, sizeof(pid_buf), "%ld\n", (long)getpid());
+    if (write(fd, pid_buf, (size_t)len) != len) {
+        fprintf(stderr, "Failed to write pidfile '%s': %s\n", pidfile_path, strerror(errno));
+        close(fd);
+        return false;
+    }
+
+    *pidfile_fd = fd;
+    return true;
+}
+
+static bool redirect_stdio(const char* logfile, int* log_fd) {
+    int null_fd = open("/dev/null", O_RDONLY);
+    if (null_fd == -1 || dup2(null_fd, STDIN_FILENO) == -1) {
+        if (null_fd != -1) close(null_fd);
+        return false;
+    }
+    close(null_fd);
+
+    int out_fd = -1;
+    if (logfile) {
+        out_fd = open(logfile, O_WRONLY | O_CREAT | O_APPEND, 0644);
+        if (out_fd == -1) {
+            fprintf(stderr, "Failed to open logfile '%s': %s\n", logfile, strerror(errno));
+            return false;
+        }
+    } else {
+        out_fd = open("/dev/null", O_WRONLY);
+        if (out_fd == -1) {
+            return false;
+        }
+    }
+
+    if (dup2(out_fd, STDOUT_FILENO) == -1 || dup2(out_fd, STDERR_FILENO) == -1) {
+        close(out_fd);
+        return false;
+    }
+
+    if (log_fd) {
+        *log_fd = logfile ? out_fd : -1;
+    }
+    if (!logfile) {
+        close(out_fd);
+    }
+
+    return true;
+}
+#endif
+
+static bool daemonize_process(const char* working_dir, const char* pidfile, const char* logfile) {
+#ifdef _WIN32
+    (void)working_dir;
+    (void)pidfile;
+    (void)logfile;
+    fprintf(stderr, "Daemon mode is not supported on Windows builds.\n");
+    return false;
+#else
+    pid_t pid = fork();
+    if (pid < 0) {
+        perror("fork");
+        return false;
+    }
+    if (pid > 0) {
+        _exit(0);
+    }
+
+    if (setsid() < 0) {
+        perror("setsid");
+        return false;
+    }
+
+    pid = fork();
+    if (pid < 0) {
+        perror("fork");
+        return false;
+    }
+    if (pid > 0) {
+        _exit(0);
+    }
+
+    umask(027);
+    if (chdir(working_dir ? working_dir : "/") != 0) {
+        fprintf(stderr, "Failed to chdir during daemonization: %s\n", strerror(errno));
+        return false;
+    }
+
+    if (!redirect_stdio(logfile, &g_runtime.log_fd)) {
+        fprintf(stderr, "Failed to redirect stdio for daemon mode\n");
+        return false;
+    }
+
+    if (pidfile && !lock_and_write_pidfile(pidfile, &g_runtime.pidfile_fd)) {
+        return false;
+    }
+
+    if (pidfile) {
+        strncpy(g_runtime.pidfile_path, pidfile, sizeof(g_runtime.pidfile_path) - 1);
+        g_runtime.pidfile_path[sizeof(g_runtime.pidfile_path) - 1] = '\0';
+    }
+    g_runtime.detached = true;
+    return true;
+#endif
+}
 
 // Initialize runtime
 static bool initialize_runtime(void) {
@@ -369,6 +517,8 @@ static bool initialize_runtime(void) {
 
 g_runtime.state_machine = NULL;
 g_runtime.running = true;
+g_runtime.pidfile_fd = -1;
+g_runtime.log_fd = -1;
     return true;
 }
 
@@ -692,6 +842,21 @@ static void cleanup_runtime(void) {
         g_runtime.wsaInitialized = false;
     }
 #endif
+
+#ifndef _WIN32
+    if (g_runtime.pidfile_fd >= 0) {
+        close(g_runtime.pidfile_fd);
+        g_runtime.pidfile_fd = -1;
+    }
+    if (g_runtime.pidfile_path[0] != '\0') {
+        unlink(g_runtime.pidfile_path);
+        g_runtime.pidfile_path[0] = '\0';
+    }
+    if (g_runtime.log_fd >= 0) {
+        close(g_runtime.log_fd);
+        g_runtime.log_fd = -1;
+    }
+#endif
 }
 
 
@@ -715,13 +880,35 @@ static void register_signal_handlers(void) {
 int main(int argc, char* argv[]) {
     bool non_interactive = false;
     const char* config_file = NULL;
+    bool detach = false;
+    const char* pidfile = NULL;
+    const char* logfile = NULL;
     
     // Parse command line arguments
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-f") == 0 && i + 1 < argc) {
             config_file = argv[++i];
             non_interactive = true;
+        } else if (strcmp(argv[i], "--detach") == 0) {
+            detach = true;
+        } else if (strcmp(argv[i], "--pidfile") == 0 && i + 1 < argc) {
+            pidfile = argv[++i];
+        } else if (strcmp(argv[i], "--logfile") == 0 && i + 1 < argc) {
+            logfile = argv[++i];
+        } else {
+            fprintf(stderr, "Unknown or incomplete option: %s\n", argv[i]);
+            fprintf(stderr, "Usage: %s [-f config] [--detach] [--pidfile path] [--logfile path]\n", argv[0]);
+            return 1;
         }
+    }
+
+    if (detach && !non_interactive) {
+        fprintf(stderr, "--detach is only supported in non-interactive mode (-f).\n");
+        return 1;
+    }
+
+    if (detach && !daemonize_process("/", pidfile, logfile)) {
+        return 1;
     }
 
     if (!initialize_runtime()) {

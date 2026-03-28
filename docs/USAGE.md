@@ -1,160 +1,91 @@
+# PolyCall Usage
 
+## Interactive mode (default)
+Run without `-f` to use the CLI shell:
 
-1. Create the base configuration directory:
 ```bash
-mkdir -p /opt/polycall/services/{node,python,java,go}
+./bin/polycall
 ```
 
-2. Create the main config.Polycallfile in your project root:
-```bash
-# In libpolycall/config.Polycallfile
-server node 3000:8080
-server python 3001:8081
-network start
-network_timeout=5000
-workspace_root=/opt/polycall/services
-```
+This mode stays attached to your terminal and supports commands like `help`, `start_network`, and `quit`.
 
-3. Create service-specific configurations:
-```bash
-# In /opt/polycall/services/node/.polycallrc
-port=3000:8080
-server_type=node
-workspace=/opt/polycall/services/node
+## Non-interactive mode
+Use `-f` to start from a config file:
 
-# In /opt/polycall/services/python/.polycallrc
-port=3001:8081
-server_type=python
-workspace=/opt/polycall/services/python
-```
-
-Now, to run PolyCall in non-interactive mode with your bindings:
-
-1. Start the PolyCall service:
 ```bash
 ./bin/polycall -f config.Polycallfile
 ```
 
-2. Start the Node.js binding server:
-```bash
-cd ../bindings/node-polycall/examples
-node server.js
-```
+Example config:
 
-3. Test the connection:
-```bash
-# In another terminal
-node test_client.js
-```
-
-To verify everything is working:
-
-1. Check the running services:
-```bash
-ps aux | grep polycall # Let me explain how to set up and use the non-interactive mode with your current codebase.
-
-First, create the necessary configuration files in your project structure:
-
-1. Create the base configuration directory:
-```bash
-sudo mkdir -p /opt/polycall/services/{node,python,java,go}
-```
-
-2. Create the main config.Polycallfile in your project root:
-```bash
-# In libpolycall/config.Polycallfile
+```ini
+# config.Polycallfile
 server node 3000:8080
 server python 3001:8081
+port 3000:8080
 network start
-network_timeout=5000
-workspace_root=/opt/polycall/services
 ```
 
-3. Create service-specific configurations:
+## Detached daemon mode
+Non-interactive mode can be daemonized with `--detach`:
+
 ```bash
-# In /opt/polycall/services/node/.polycallrc
-port=3000:8080
-server_type=node
-workspace=/opt/polycall/services/node
-
-# In /opt/polycall/services/python/.polycallrc
-port=3001:8081
-server_type=python
-workspace=/opt/polycall/services/python
+./bin/polycall -f config.Polycallfile --detach
 ```
 
-Now, to run PolyCall in non-interactive mode with your bindings:
+Optional daemon flags:
 
-1. Start the PolyCall service:
+- `--pidfile <path>`: write daemon PID and hold an exclusive lock.
+- `--logfile <path>`: redirect stdout/stderr to this file (append mode).
+
+Example:
+
 ```bash
-./bin/polycall -f config.Polycallfile
+./bin/polycall -f config.Polycallfile --detach \
+  --pidfile /var/run/polycall.pid \
+  --logfile /var/log/polycall.log
 ```
 
-2. Start the Node.js binding server:
+### Daemon lifecycle
+When `--detach` is used, PolyCall follows a dedicated daemonization flow:
+
+1. `fork()` and parent exits.
+2. `setsid()` to become session leader.
+3. Second `fork()` and parent exits.
+4. `umask(027)` and `chdir("/")`.
+5. Redirect `stdin` to `/dev/null`; redirect `stdout/stderr` to logfile (or `/dev/null` if omitted).
+6. Create and lock pidfile (if provided) and write daemon PID.
+
+On shutdown (`SIGINT`, `SIGTERM`, or normal exit), runtime cleanup releases resources and removes the pidfile.
+
+## Ops commands
+Start daemon:
+
 ```bash
-cd ../bindings/node-polycall/examples
-node server.js
+./bin/polycall -f config.Polycallfile --detach --pidfile /tmp/polycall.pid --logfile /tmp/polycall.log
 ```
 
-3. Test the connection:
+Check status:
+
 ```bash
-# In another terminal
-node test_client.js
+cat /tmp/polycall.pid
+ps -fp "$(cat /tmp/polycall.pid)"
 ```
 
-To verify everything is working:
+Tail logs:
 
-1. Check the running services:
 ```bash
-ps aux | grep polycall
+tail -f /tmp/polycall.log
 ```
 
-2. Monitor the port mappings:
+Stop daemon:
+
 ```bash
-netstat -tulpn | grep polycall
+kill -TERM "$(cat /tmp/polycall.pid)"
 ```
 
-Your Node.js binding will automatically connect to the PolyCall service through the configured port mapping (3000:8080). The PolyCall service handles the routing and communication between different language servers.
+Verify port listeners:
 
-To integrate a new language binding:
-
-1. Add its configuration to config.Polycallfile:
-```
-server newlang 3004:8084
-```
-
-2. Create its service directory and configuration:
 ```bash
-mkdir -p /opt/polycall/services/newlang
-echo "port=3004:8084" > /opt/polycall/services/newlang/.polycallrc
+ss -ltnp | grep polycall
 ```
-
-3. Restart the PolyCall service to apply the new configuration.
-
-This setup allows PolyCall to act as a central coordinator for all your language bindings while maintaining clean separation between services.
-```
-
-2. Monitor the port mappings:
-```bash
-netstat -tulpn | grep polycall
-```
-
-
-Your Node.js binding will automatically connect to the PolyCall service through the configured port mapping (3000:8080). The PolyCall service handles the routing and communication between different language servers.
-
-To integrate a new language binding:
-
-1. Add its configuration to config.Polycallfile:
-```
-server newlang 3004:8084
-```
-
-2. Create its service directory and configuration:
-```bash
-mkdir -p /opt/polycall/services/newlang
-echo "port=3004:8084" > /opt/polycall/services/newlang/.polycallrc
-```
-
-3. Restart the PolyCall service to apply the new configuration.
-
-This setup allows PolyCall to act as a central coordinator for all your language bindings while maintaining clean separation between services.
