@@ -180,6 +180,9 @@ java -jar target/java-polycall-1.0.0-jar-with-dependencies.jar telemetry --obser
 
 # Export telemetry data
 java -jar target/java-polycall-1.0.0-jar-with-dependencies.jar telemetry --export --format json
+
+# Emit trinary consensus telemetry event
+java -jar target/java-polycall-1.0.0-jar-with-dependencies.jar telemetry consensus --state maybe --session session-42
 ```
 
 ---

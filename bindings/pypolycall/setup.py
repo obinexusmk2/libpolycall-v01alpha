@@ -56,7 +56,7 @@ setup(
     long_description=read_readme(),
     long_description_content_type="text/markdown",
     url="https://gitlab.com/obinexuscomputing/libpolycall-v1trial/tree/main/bindings/pypolycall",
-    packages=find_packages(exclude=["tests", "tests.*", "docs", "examples"]),
+    packages=find_packages(exclude=["tests", "tests.*", "docs", "examples", "pypolycall.pypolycall", "pypolycall.pypolycall.*"]),
     python_requires=">=3.8",
     install_requires=read_requirements(),
     extras_require={

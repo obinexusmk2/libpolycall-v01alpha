@@ -1,188 +1,43 @@
+# Usage: practical "how to run"
 
+This guide only includes commands validated from the repository root (`/workspace/libpolycall-v01alpha`) in this environment.
 
-1. Create the base configuration directory:
+## 1) Run the prebuilt core CLI (`libpolycall-v1`)
+
 ```bash
-mkdir -p /opt/polycall/services/{node,python,java,go}
+chmod +x libpolycall-v1/bin/polycall
+printf 'help\nquit\n' | libpolycall-v1/bin/polycall
 ```
 
-2. Create the main config.Polycallfile in your project root:
+What this does:
+- marks the bundled CLI binary executable,
+- starts it,
+- prints command help,
+- exits cleanly.
+
+## 2) Smoke test the Python binding tests (`bindings/pypolycall`)
+
 ```bash
-# In libpolycall/config.Polycallfile
-server node 3000:8080
-server python 3001:8081
-network start
-network_timeout=5000
-workspace_root=/opt/polycall/services
+pytest -q bindings/pypolycall/tests/unit/config/test_manager.py
 ```
 
-3. Create service-specific configurations:
+## 3) Smoke test the Node.js binding module export (`bindings/node-polycall`)
+
 ```bash
-# In /opt/polycall/services/node/.polycallrc
-port=3000:8080
-server_type=node
-workspace=/opt/polycall/services/node
-
-# In /opt/polycall/services/python/.polycallrc
-port=3001:8081
-server_type=python
-workspace=/opt/polycall/services/python
+node -e "const m=require('./bindings/node-polycall/src/index.js'); console.log(Object.keys(m))"
 ```
 
-Now, to run PolyCall in non-interactive mode with your bindings:
+Expected result: a list of exported modules such as `PolyCallClient`, `Router`, and `ProtocolHandler`.
 
-1. Start the PolyCall service:
+## 4) Optional: inspect major docs quickly
+
 ```bash
-./bin/polycall -f config.Polycallfile
+sed -n '1,160p' README.md
+sed -n '1,200p' docs/architecture/ARCHITECTURE.md
+sed -n '1,240p' docs/REFERENCE.md
 ```
 
-2. Start the Node.js binding server:
-```bash
-cd ../bindings/node-polycall/examples
-node server.js
-```
+## Notes
 
-3. Test the connection:
-```bash
-# In another terminal
-node test_client.js
-```
-
-To verify everything is working:
-
-1. Check the running services:
-```bash
-ps aux | grep polycall # Let me explain how to set up and use the non-interactive mode with your current codebase.
-
-First, create the necessary configuration files in your project structure:
-
-1. Create the base configuration directory:
-```bash
-sudo mkdir -p /opt/polycall/services/{node,python,java,go}
-```
-
-2. Create the main config.Polycallfile in your project root:
-```bash
-# In libpolycall/config.Polycallfile
-server node 3000:8080
-server python 3001:8081
-network start
-network_timeout=5000
-workspace_root=/opt/polycall/services
-```
-
-3. Create service-specific configurations:
-```bash
-# In /opt/polycall/services/node/.polycallrc
-port=3000:8080
-server_type=node
-workspace=/opt/polycall/services/node
-
-# In /opt/polycall/services/python/.polycallrc
-port=3001:8081
-server_type=python
-workspace=/opt/polycall/services/python
-```
-
-Now, to run PolyCall in non-interactive mode with your bindings:
-
-1. Start the PolyCall service:
-```bash
-./bin/polycall -f config.Polycallfile
-```
-
-2. Start the Node.js binding server:
-```bash
-cd ../bindings/node-polycall/examples
-node server.js
-```
-
-3. Test the connection:
-```bash
-# In another terminal
-node test_client.js
-```
-
-To verify everything is working:
-
-1. Check the running services:
-```bash
-ps aux | grep polycall
-```
-
-2. Monitor the port mappings:
-```bash
-netstat -tulpn | grep polycall
-```
-
-Your Node.js binding will automatically connect to the PolyCall service through the configured port mapping (3000:8080). The PolyCall service handles the routing and communication between different language servers.
-
-To integrate a new language binding:
-
-1. Add its configuration to config.Polycallfile:
-```
-server newlang 3004:8084
-```
-
-2. Create its service directory and configuration:
-```bash
-mkdir -p /opt/polycall/services/newlang
-echo "port=3004:8084" > /opt/polycall/services/newlang/.polycallrc
-```
-
-3. Restart the PolyCall service to apply the new configuration.
-
-This setup allows PolyCall to act as a central coordinator for all your language bindings while maintaining clean separation between services.
-```
-
-2. Monitor the port mappings:
-```bash
-netstat -tulpn | grep polycall
-```
-
-
-Your Node.js binding will automatically connect to the PolyCall service through the configured port mapping (3000:8080). The PolyCall service handles the routing and communication between different language servers.
-
-To integrate a new language binding:
-
-1. Add its configuration to config.Polycallfile:
-```
-server newlang 3004:8084
-```
-
-2. Create its service directory and configuration:
-```bash
-mkdir -p /opt/polycall/services/newlang
-echo "port=3004:8084" > /opt/polycall/services/newlang/.polycallrc
-```
-
-3. Restart the PolyCall service to apply the new configuration.
-
-This setup allows PolyCall to act as a central coordinator for all your language bindings while maintaining clean separation between services.
-## Trinary decision wire payloads
-
-`libpolycall-v1` now supports a trinary decision value at the protocol payload layer.
-
-### Public enum
-
-Use `polycall_decision_t` from `libpolycall-v1/include/polycall_decision.h`:
-
-- `POLYCALL_DECISION_NO` (`0`)
-- `POLYCALL_DECISION_YES` (`1`)
-- `POLYCALL_DECISION_MAYBE` (`2`)
-
-### Wire format
-
-Decision payloads are encoded as exactly **1 byte**:
-
-- `0x00` = `NO`
-- `0x01` = `YES`
-- `0x02` = `MAYBE`
-
-Values outside this set are rejected by the decoder.
-
-### API helpers
-
-- `polycall_protocol_encode_decision(...)` encodes a single trinary value.
-- `polycall_protocol_decode_decision(...)` validates and decodes a single-byte payload.
-
-Behavioral guarantee: encoding then decoding any legal trinary value preserves the exact decision, including unresolved `MAYBE`.
+- The build path exists at `libpolycall-v1/Makefile`, but in this repo snapshot `make -C libpolycall-v1 all` currently fails due duplicate/corrupted content in `libpolycall-v1/src/polycall_tokenizer.c`. That compile command is intentionally **not** part of the run baseline.
+- All paths in this guide are repo-relative.

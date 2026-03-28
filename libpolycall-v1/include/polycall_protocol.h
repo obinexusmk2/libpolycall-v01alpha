@@ -4,7 +4,6 @@
 #include "polycall.h"
 #include "polycall_state_machine.h"
 #include "network.h"
-#include "polycall_decision.h"
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -18,8 +17,24 @@ typedef enum {
     POLYCALL_MSG_COMMAND = 0x03,
     POLYCALL_MSG_RESPONSE = 0x04,
     POLYCALL_MSG_ERROR = 0x05,
-    POLYCALL_MSG_HEARTBEAT = 0x06
+    POLYCALL_MSG_HEARTBEAT = 0x06,
+    POLYCALL_MSG_CONSENSUS_ECHO = 0x07,
+    POLYCALL_MSG_CONSENSUS_ACK = 0x08
 } polycall_message_type_t;
+
+// Shared trinary decision model
+typedef enum {
+    POLYCALL_DECISION_NO = 0x00,
+    POLYCALL_DECISION_MAYBE = 0x01,
+    POLYCALL_DECISION_YES = 0x02
+} polycall_decision_t;
+
+// Wire-level consensus payload structure
+typedef struct {
+    uint8_t decision;          // polycall_decision_t
+    uint32_t correlation_id;   // sequence identifier being acknowledged/echoed
+    uint8_t persisted;         // 1 when MAYBE state is durably persisted
+} polycall_consensus_payload_t;
 
 // Protocol states
 typedef enum {
@@ -56,6 +71,9 @@ typedef struct {
     PolyCall_StateMachine* state_machine;
     NetworkEndpoint* endpoint;
     uint32_t next_sequence;
+    uint32_t last_consensus_ack;
+    polycall_decision_t consensus_state;
+    bool consensus_maybe_persisted;
     polycall_protocol_state_t state;
     void* user_data;
 } polycall_protocol_context_t;
@@ -120,21 +138,6 @@ bool polycall_protocol_can_transition(
     polycall_protocol_state_t target_state
 );
 
-
-// Trinary decision payload codec
-bool polycall_protocol_encode_decision(
-    polycall_decision_t decision,
-    uint8_t* buffer,
-    size_t buffer_size,
-    size_t* encoded_length
-);
-
-bool polycall_protocol_decode_decision(
-    const void* payload,
-    size_t payload_length,
-    polycall_decision_t* decision
-);
-
 // Protocol handshake helpers
 bool polycall_protocol_start_handshake(polycall_protocol_context_t* ctx);
 bool polycall_protocol_complete_handshake(polycall_protocol_context_t* ctx);
@@ -144,6 +147,28 @@ bool polycall_protocol_authenticate(
     polycall_protocol_context_t* ctx,
     const char* credentials,
     size_t credentials_length
+);
+
+// Consensus helpers
+bool polycall_protocol_send_consensus_echo(
+    polycall_protocol_context_t* ctx,
+    polycall_decision_t decision,
+    uint32_t correlation_id
+);
+
+bool polycall_protocol_send_consensus_ack(
+    polycall_protocol_context_t* ctx,
+    polycall_decision_t decision,
+    uint32_t correlation_id,
+    bool persisted
+);
+
+polycall_decision_t polycall_protocol_get_consensus_state(
+    const polycall_protocol_context_t* ctx
+);
+
+bool polycall_protocol_is_maybe_persisted(
+    const polycall_protocol_context_t* ctx
 );
 
 // Protocol error handling

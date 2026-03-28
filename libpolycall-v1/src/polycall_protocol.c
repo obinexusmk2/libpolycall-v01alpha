@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#include <stdio.h>
 
 #define MAX_ERROR_LENGTH 256
 #define PROTOCOL_BUFFER_SIZE 4096
@@ -33,7 +34,7 @@ static bool validate_message_header(const polycall_message_header_t* header) {
     }
     
     // Validate message type
-    if (header->type < POLYCALL_MSG_HANDSHAKE || header->type > POLYCALL_MSG_HEARTBEAT) {
+    if (header->type < POLYCALL_MSG_HANDSHAKE || header->type > POLYCALL_MSG_CONSENSUS_ACK) {
         snprintf(protocol_error_buffer, MAX_ERROR_LENGTH,
                 "Invalid message type: %d", header->type);
         return false;
@@ -112,6 +113,9 @@ bool polycall_protocol_init(
     internal_ctx->base.endpoint = endpoint;
     internal_ctx->base.state = POLYCALL_STATE_INIT;
     internal_ctx->base.next_sequence = 1;
+    internal_ctx->base.last_consensus_ack = 0;
+    internal_ctx->base.consensus_state = POLYCALL_DECISION_MAYBE;
+    internal_ctx->base.consensus_maybe_persisted = false;
     internal_ctx->base.user_data = config->user_data;
     
     // Copy callbacks
@@ -255,6 +259,53 @@ bool polycall_protocol_process(
         case POLYCALL_MSG_HEARTBEAT:
             // Process heartbeat
             break;
+
+        case POLYCALL_MSG_CONSENSUS_ECHO: {
+            if (payload_length < sizeof(polycall_consensus_payload_t)) {
+                snprintf(protocol_error_buffer, MAX_ERROR_LENGTH, "Consensus echo payload too short");
+                return false;
+            }
+
+            const polycall_consensus_payload_t* consensus =
+                (const polycall_consensus_payload_t*)payload;
+            if (consensus->decision > POLYCALL_DECISION_YES) {
+                snprintf(protocol_error_buffer, MAX_ERROR_LENGTH, "Invalid consensus decision");
+                return false;
+            }
+
+            internal_ctx->base.consensus_state = (polycall_decision_t)consensus->decision;
+            internal_ctx->base.consensus_maybe_persisted =
+                (consensus->decision == POLYCALL_DECISION_MAYBE) && (consensus->persisted != 0);
+
+            if (!polycall_protocol_send_consensus_ack(
+                    &internal_ctx->base,
+                    (polycall_decision_t)consensus->decision,
+                    header->sequence,
+                    internal_ctx->base.consensus_maybe_persisted)) {
+                return false;
+            }
+            break;
+        }
+
+        case POLYCALL_MSG_CONSENSUS_ACK: {
+            if (payload_length < sizeof(polycall_consensus_payload_t)) {
+                snprintf(protocol_error_buffer, MAX_ERROR_LENGTH, "Consensus ack payload too short");
+                return false;
+            }
+
+            const polycall_consensus_payload_t* consensus =
+                (const polycall_consensus_payload_t*)payload;
+            if (consensus->decision > POLYCALL_DECISION_YES) {
+                snprintf(protocol_error_buffer, MAX_ERROR_LENGTH, "Invalid consensus decision");
+                return false;
+            }
+
+            internal_ctx->base.last_consensus_ack = consensus->correlation_id;
+            internal_ctx->base.consensus_state = (polycall_decision_t)consensus->decision;
+            internal_ctx->base.consensus_maybe_persisted =
+                (consensus->decision == POLYCALL_DECISION_MAYBE) && (consensus->persisted != 0);
+            break;
+        }
             
         default:
             return false;
@@ -392,47 +443,6 @@ void polycall_protocol_set_error(polycall_protocol_context_t* ctx, const char* e
     transition_protocol_state(internal_ctx, POLYCALL_STATE_ERROR);
 }
 
-
-
-bool polycall_protocol_encode_decision(
-    polycall_decision_t decision,
-    uint8_t* buffer,
-    size_t buffer_size,
-    size_t* encoded_length
-) {
-    if (!buffer || buffer_size < 1 || !encoded_length) {
-        return false;
-    }
-
-    if (decision != POLYCALL_DECISION_NO &&
-        decision != POLYCALL_DECISION_YES &&
-        decision != POLYCALL_DECISION_MAYBE) {
-        return false;
-    }
-
-    buffer[0] = (uint8_t)decision;
-    *encoded_length = 1;
-    return true;
-}
-
-bool polycall_protocol_decode_decision(
-    const void* payload,
-    size_t payload_length,
-    polycall_decision_t* decision
-) {
-    if (!payload || payload_length != 1 || !decision) {
-        return false;
-    }
-
-    uint8_t raw = ((const uint8_t*)payload)[0];
-    if (raw > (uint8_t)POLYCALL_DECISION_MAYBE) {
-        return false;
-    }
-
-    *decision = (polycall_decision_t)raw;
-    return true;
-}
-
 // Protocol utility functions
 uint32_t polycall_protocol_calculate_checksum(
     const void* data,
@@ -502,4 +512,82 @@ bool polycall_protocol_is_authenticated(const polycall_protocol_context_t* ctx) 
 bool polycall_protocol_is_error(const polycall_protocol_context_t* ctx) {
     if (!ctx) return true;
     return ctx->state == POLYCALL_STATE_ERROR;
+}
+
+bool polycall_protocol_send_consensus_echo(
+    polycall_protocol_context_t* ctx,
+    polycall_decision_t decision,
+    uint32_t correlation_id
+) {
+    if (!ctx || decision > POLYCALL_DECISION_YES) {
+        return false;
+    }
+
+    polycall_consensus_payload_t payload = {
+        .decision = (uint8_t)decision,
+        .correlation_id = correlation_id,
+        .persisted = (decision == POLYCALL_DECISION_MAYBE && ctx->consensus_maybe_persisted) ? 1U : 0U
+    };
+
+    ctx->consensus_state = decision;
+    if (decision != POLYCALL_DECISION_MAYBE) {
+        ctx->consensus_maybe_persisted = false;
+        payload.persisted = 0;
+    }
+
+    return polycall_protocol_send(
+        ctx,
+        POLYCALL_MSG_CONSENSUS_ECHO,
+        &payload,
+        sizeof(payload),
+        POLYCALL_FLAG_RELIABLE
+    );
+}
+
+bool polycall_protocol_send_consensus_ack(
+    polycall_protocol_context_t* ctx,
+    polycall_decision_t decision,
+    uint32_t correlation_id,
+    bool persisted
+) {
+    if (!ctx || decision > POLYCALL_DECISION_YES) {
+        return false;
+    }
+
+    polycall_consensus_payload_t payload = {
+        .decision = (uint8_t)decision,
+        .correlation_id = correlation_id,
+        .persisted = (decision == POLYCALL_DECISION_MAYBE && persisted) ? 1U : 0U
+    };
+
+    ctx->last_consensus_ack = correlation_id;
+    ctx->consensus_state = decision;
+    ctx->consensus_maybe_persisted = payload.persisted != 0;
+
+    return polycall_protocol_send(
+        ctx,
+        POLYCALL_MSG_CONSENSUS_ACK,
+        &payload,
+        sizeof(payload),
+        POLYCALL_FLAG_RELIABLE
+    );
+}
+
+polycall_decision_t polycall_protocol_get_consensus_state(
+    const polycall_protocol_context_t* ctx
+) {
+    if (!ctx) {
+        return POLYCALL_DECISION_MAYBE;
+    }
+    return ctx->consensus_state;
+}
+
+bool polycall_protocol_is_maybe_persisted(
+    const polycall_protocol_context_t* ctx
+) {
+    if (!ctx) {
+        return false;
+    }
+    return ctx->consensus_state == POLYCALL_DECISION_MAYBE &&
+           ctx->consensus_maybe_persisted;
 }

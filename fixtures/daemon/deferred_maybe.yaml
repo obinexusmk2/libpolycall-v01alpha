@@ -1,0 +1,15 @@
+schema_version: "1.0"
+scenario_id: daemon.deferred_maybe
+domain: daemon
+decision: MAYBE
+status: deferred
+includes:
+  - start_pending.yaml
+  - retry_policy.yaml
+input:
+  operation: restart
+expected:
+  command_executed: true
+  timeout_ms: 60000
+  retry_count: 4
+  ack_required: true
