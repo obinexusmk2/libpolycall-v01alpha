@@ -56,6 +56,8 @@ typedef struct {
     PolyCall_StateSnapshot snapshots[POLYCALL_MAX_STATES];
     bool has_snapshot[POLYCALL_MAX_STATES];
     PortMappingArray port_mappings;
+    polycall_decision_t consensus_state;
+    bool consensus_maybe_persisted;
     bool interactive_mode;
 #ifdef _WIN32
     bool wsaInitialized;
@@ -80,6 +82,9 @@ static bool cmd_init(const PPI_Runtime* runtime, const char* arg1, const char* a
 static bool cmd_add_state(const PPI_Runtime* runtime, const char* name, const char* arg2, const char* arg3);
 static bool cmd_help(const PPI_Runtime* runtime, const char* arg1, const char* arg2, const char* arg3);
 static bool cmd_quit(const PPI_Runtime* runtime, const char* arg1, const char* arg2, const char* arg3);
+static bool parse_decision_state(const char* input, polycall_decision_t* decision);
+static const char* decision_to_string(polycall_decision_t decision);
+static bool handle_telemetry_namespace(const char* arg1, const char* arg2, const char* arg3);
 
 // State callbacks
 static void on_init(polycall_context_t ctx) {
@@ -186,6 +191,60 @@ static bool cmd_quit(const PPI_Runtime* runtime, const char* arg1, const char* a
     return true;
 }
 
+static bool parse_decision_state(const char* input, polycall_decision_t* decision) {
+    if (!input || !decision) {
+        return false;
+    }
+
+    if (strcmp(input, "yes") == 0) {
+        *decision = POLYCALL_DECISION_YES;
+        return true;
+    }
+    if (strcmp(input, "no") == 0) {
+        *decision = POLYCALL_DECISION_NO;
+        return true;
+    }
+    if (strcmp(input, "maybe") == 0) {
+        *decision = POLYCALL_DECISION_MAYBE;
+        return true;
+    }
+    return false;
+}
+
+static const char* decision_to_string(polycall_decision_t decision) {
+    switch (decision) {
+        case POLYCALL_DECISION_YES: return "yes";
+        case POLYCALL_DECISION_NO: return "no";
+        case POLYCALL_DECISION_MAYBE: return "maybe";
+        default: return "unknown";
+    }
+}
+
+static bool handle_telemetry_namespace(const char* arg1, const char* arg2, const char* arg3) {
+    if (!arg1 || strcmp(arg1, "consensus") != 0) {
+        printf("Usage: telemetry consensus --state <yes|no|maybe>\n");
+        return false;
+    }
+
+    if (!arg2 || strcmp(arg2, "--state") != 0 || !arg3) {
+        printf("Usage: telemetry consensus --state <yes|no|maybe>\n");
+        return false;
+    }
+
+    polycall_decision_t decision;
+    if (!parse_decision_state(arg3, &decision)) {
+        printf("Invalid consensus state '%s'. Expected yes, no, or maybe.\n", arg3);
+        return false;
+    }
+
+    g_runtime.consensus_state = decision;
+    g_runtime.consensus_maybe_persisted = (decision == POLYCALL_DECISION_MAYBE);
+    printf("Telemetry consensus state set to '%s'%s\n",
+           decision_to_string(decision),
+           g_runtime.consensus_maybe_persisted ? " (persisted)" : "");
+    return true;
+}
+
 static bool cmd_add_state(const PPI_Runtime* runtime, const char* name, const char* arg2, const char* arg3) {
     (void)arg2; (void)arg3;
     
@@ -247,6 +306,7 @@ static bool cmd_help(const PPI_Runtime* runtime, const char* arg1, const char* a
     printf("  execute NAME          - Execute a transition\n");
     
     printf("\nMiscellaneous Commands:\n");
+    printf("  telemetry consensus --state <yes|no|maybe> - Set trinary consensus state\n");
     printf("  help                - Show this help message\n");
     printf("  quit                - Exit the program\n");
     
@@ -379,8 +439,10 @@ static bool initialize_runtime(void) {
         return false;
     }
 
-g_runtime.state_machine = NULL;
-g_runtime.running = true;
+    g_runtime.state_machine = NULL;
+    g_runtime.running = true;
+    g_runtime.consensus_state = POLYCALL_DECISION_MAYBE;
+    g_runtime.consensus_maybe_persisted = false;
     return true;
 }
 
@@ -413,6 +475,13 @@ static void process_command(PPI_Runtime* runtime, const char* input) {
     char* arg3 = strtok(NULL, " ");
 
     if (!cmd) return;
+
+    if (strcmp(cmd, "telemetry") == 0) {
+        if (!handle_telemetry_namespace(arg1, arg2, arg3)) {
+            printf("Usage: telemetry consensus --state <yes|no|maybe>\n");
+        }
+        return;
+    }
 
     // Find and execute command
     for (size_t i = 0; i < sizeof(COMMANDS) / sizeof(COMMANDS[0]); i++) {

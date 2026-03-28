@@ -1,0 +1,27 @@
+{
+  "version": "1.0",
+  "description": "Canonical decision-state transitions for human-in-loop consensus flows.",
+  "scenarios": [
+    {
+      "id": "approve_path_yes",
+      "initial_state": "MAYBE",
+      "decision": "YES",
+      "expected_state": "YES",
+      "requires_ack": true
+    },
+    {
+      "id": "decline_path_no",
+      "initial_state": "MAYBE",
+      "decision": "NO",
+      "expected_state": "NO",
+      "requires_ack": true
+    },
+    {
+      "id": "defer_path_maybe",
+      "initial_state": "YES",
+      "decision": "MAYBE",
+      "expected_state": "MAYBE",
+      "requires_ack": false
+    }
+  ]
+}
