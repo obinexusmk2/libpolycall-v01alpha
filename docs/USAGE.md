@@ -1,159 +1,43 @@
-# LibPolyCall Usage Guide (`libpolycall-v1`)
+# Usage: practical "how to run"
 
-This guide is a linear, repository-accurate setup for the C runtime in `libpolycall-v1/` and the language bindings in `bindings/`.
+This guide only includes commands validated from the repository root (`/workspace/libpolycall-v01alpha`) in this environment.
 
-## 1) Prerequisites
-
-- C toolchain with `gcc`/`make`.
-- OpenSSL development libraries (`-lssl`, `-lcrypto`) and pthread support (used by the Makefile).
-- Optional per-binding tools:
-  - Java 17+ + Maven (`bindings/java-polycall/`)
-  - Python 3.8+ + `pip` (`bindings/pypolycall/`)
-  - Node.js + npm (`bindings/node-polycall/`)
-  - Go 1.21+ (`bindings/go-polycall/`)
-  - Lua interpreter + LuaRocks-compatible environment (`bindings/lua-polycall/`)
-
-## 2) Build and run `libpolycall-v1`
-
-From the repo root:
+## 1) Run the prebuilt core CLI (`libpolycall-v1`)
 
 ```bash
-cd libpolycall-v1
-make all
+chmod +x libpolycall-v1/bin/polycall
+printf 'help\nquit\n' | libpolycall-v1/bin/polycall
 ```
 
-Build outputs:
+What this does:
+- marks the bundled CLI binary executable,
+- starts it,
+- prints command help,
+- exits cleanly.
 
-- Static library: `libpolycall-v1/build/lib/libpolycall.a`
-- Shared library: `libpolycall-v1/build/lib/libpolycall.so` (or `.dll` on Windows)
-- Runtime binary: `libpolycall-v1/build/bin/polycall`
-
-Run the runtime (interactive mode):
+## 2) Smoke test the Python binding tests (`bindings/pypolycall`)
 
 ```bash
-./build/bin/polycall
+pytest -q bindings/pypolycall/tests/unit/config/test_manager.py
 ```
 
-Run with an explicit configuration file:
+## 3) Smoke test the Node.js binding module export (`bindings/node-polycall`)
 
 ```bash
-./build/bin/polycall -f config.Polycallfile
+node -e "const m=require('./bindings/node-polycall/src/index.js'); console.log(Object.keys(m))"
 ```
 
-Useful build variants:
+Expected result: a list of exported modules such as `PolyCallClient`, `Router`, and `ProtocolHandler`.
+
+## 4) Optional: inspect major docs quickly
 
 ```bash
-make debug
-make release
-make clean
+sed -n '1,160p' README.md
+sed -n '1,200p' docs/architecture/ARCHITECTURE.md
+sed -n '1,240p' docs/REFERENCE.md
 ```
 
-## 3) Configuration examples (matching `libpolycall-v1/config.Polycallfile`)
+## Notes
 
-The checked-in baseline file is:
-
-```ini
-# Language Server Definitions
-server node 8080:8084
-server python 3001:8084
-server java 3002:8082
-server go 3003:8083
-
-# Network Configuration
-network start
-network_timeout=5000
-max_connections=1000
-
-# Global Settings
-log_directory=/var/log/polycall
-workspace_root=/opt/polycall
-
-# Service Discovery
-auto_discover=true
-discovery_interval=60
-
-# Security Configuration
-tls_enabled=true
-cert_file=/etc/polycall/cert.pem
-key_file=/etc/polycall/key.pem
-
-# Resource Limits
-max_memory_per_service=1G
-max_cpu_per_service=2
-
-# Monitoring
-enable_metrics=true
-metrics_port=9090
-```
-
-Minimal local-development variant (same keys, local paths):
-
-```ini
-server node 8080:8084
-server python 3001:8084
-server java 3002:8082
-server go 3003:8083
-
-network start
-network_timeout=5000
-max_connections=1000
-
-log_directory=./logs
-workspace_root=.
-
-auto_discover=true
-discovery_interval=60
-
-tls_enabled=false
-cert_file=./certs/dev-cert.pem
-key_file=./certs/dev-key.pem
-
-max_memory_per_service=1G
-max_cpu_per_service=2
-
-enable_metrics=true
-metrics_port=9090
-```
-
-## 4) Binding entry points by language
-
-These are the primary runtime or CLI entry points visible in the current tree.
-
-### C runtime
-- Binary entry: `libpolycall-v1/main.c`
-- Build target: `libpolycall-v1/build/bin/polycall`
-
-### Java
-- CLI main class: `org.obinexus.cli.Main`
-- Source entry file: `bindings/java-polycall/src/main/java/org/obinexus/cli/Main.java`
-- Packaged execution (after Maven build):
-  ```bash
-  java -jar bindings/java-polycall/target/java-polycall-1.0.0-jar-with-dependencies.jar
-  ```
-
-### Python
-- Console script: `pypolycall`
-- Setup mapping: `pypolycall=pypolycall.cli.main:main`
-- Module entry file: `bindings/pypolycall/pypolycall/cli/main.py`
-
-### Node.js
-- Package main: `bindings/node-polycall/src/index.js`
-- Start command:
-  ```bash
-  npm --prefix bindings/node-polycall start
-  ```
-
-### Go
-- Public client surface: `bindings/go-polycall/pkg/client.go`
-- Example entrypoint:
-  `bindings/go-polycall/examples/test_client_api.go`
-
-### Lua
-- CLI shim: `bindings/lua-polycall/bin/lua-polycall`
-- Lua CLI module: `bindings/lua-polycall/polycall/cli/main.lua`
-
-## Related docs
-
-- [Architecture](architecture/ARCHITECTURE.md)
-- [Traversal map](TRAVERSAL.md)
-- [Plan/index](PLAN.md)
+- The build path exists at `libpolycall-v1/Makefile`, but in this repo snapshot `make -C libpolycall-v1 all` currently fails due duplicate/corrupted content in `libpolycall-v1/src/polycall_tokenizer.c`. That compile command is intentionally **not** part of the run baseline.
+- All paths in this guide are repo-relative.

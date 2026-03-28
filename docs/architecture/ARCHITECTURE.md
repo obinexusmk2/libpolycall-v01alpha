@@ -1,81 +1,72 @@
-# LibPolyCall Repository Architecture
+# Repository Architecture
 
-This document reflects the **current tree** rooted at `libpolycall-v01alpha` and uses `libpolycall-v1` as the canonical runtime name.
-
-## Top-level layout
+Accurate repo-relative structure focused on onboarding and traversal.
 
 ```text
-/workspace/libpolycall-v01alpha/
-├── libpolycall-v1/   # Core C runtime, parser/protocol/network/state components
-├── bindings/         # Language bindings (Java, Python, Node, Go, Lua, and legacy/outdated snapshots)
-├── projects/         # Demonstration and integration projects
-├── tools/            # Utility scripts for repository maintenance
-├── docs/             # Documentation index and architecture/traversal guides
-├── examples/         # Lightweight multi-language client examples
-└── ports/            # Packaging/port metadata (e.g., vcpkg)
+.
+├── README.md
+├── docs/
+│   ├── USAGE.md
+│   ├── REFERENCE.md
+│   ├── PLAN.md
+│   ├── FEATURES.md
+│   ├── TRIAL.md
+│   └── architecture/
+│       └── ARCHITECTURE.md
+├── libpolycall-v1/
+│   ├── Makefile
+│   ├── main.c
+│   ├── config.Polycallfile
+│   ├── include/
+│   │   ├── polycall.h
+│   │   ├── polycall_protocol.h
+│   │   ├── polycall_state_machine.h
+│   │   ├── polycall_micro.h
+│   │   ├── polycall_parser.h
+│   │   ├── polycall_tokenizer.h
+│   │   └── network.h
+│   ├── src/
+│   │   ├── polycall.c
+│   │   ├── polycall_protocol.c
+│   │   ├── polycall_state_machine.c
+│   │   ├── polycall_micro.c
+│   │   ├── polycall_parser.c
+│   │   ├── polycall_tokenizer.c
+│   │   ├── polycall_token.c
+│   │   └── network.c
+│   ├── test/
+│   │   ├── test_polystate.c
+│   │   └── test_polystate_machine.c
+│   └── bin/
+│       └── polycall
+├── bindings/
+│   ├── node-polycall/
+│   ├── pypolycall/
+│   ├── go-polycall/
+│   ├── java-polycall/
+│   ├── lua-polycall/
+│   ├── node-polycall(outdated)/
+│   └── pypolycall-outdated/
+├── projects/
+│   ├── banking-system/
+│   ├── banking-secure-bridge/
+│   ├── telemetry-dashboard/
+│   └── edge-iot-mesh/
+├── tools/
+│   └── scripts/
+│       ├── clone_commit.py
+│       └── fix_for_powershell.ps1
+├── examples/
+├── ports/
+└── images/
 ```
 
-## Directory responsibilities
+## Traversal order (recommended)
 
-## `libpolycall-v1/` (core runtime)
-
-- `main.c`: runtime process entrypoint and command loop.
-- `src/`: core runtime modules (protocol, parser, tokenizer, network, state machine, micro runtime).
-- `include/`: public headers for runtime modules.
-- `config.Polycallfile`: baseline multi-language service/network/security config.
-- `Makefile`: build orchestration for static/shared libraries and runtime binary.
-- `test/`: C-level tests.
-
-## `bindings/` (language adapters)
-
-Active binding directories in the tree:
-
-- `java-polycall/`
-- `pypolycall/`
-- `node-polycall/`
-- `go-polycall/`
-- `lua-polycall/`
-
-Legacy snapshots kept intentionally for historical compatibility/reference:
-
-- `node-polycall(outdated)/`
-- `pypolycall-outdated/`
-- `pypolycall/backup_20250603_233522/`
-
-## `projects/` (demo implementations)
-
-Present project directories:
-
-- `banking-system/`
-- `banking-secure-bridge/`
-- `edge-iot-mesh/`
-- `telemetry-dashboard/`
-
-These projects demonstrate integration patterns, testing, and domain-specific use of LibPolyCall components.
-
-## `tools/` (utility scripts)
-
-Contains repository maintenance/automation scripts, including:
-
-- `tools/scripts/clone_commit.py`
-- `tools/scripts/fix_for_powershell.ps1`
-
-## `docs/` (documentation)
-
-Primary docs for navigation:
-
-- `docs/PLAN.md` (documentation index/start point)
-- `docs/USAGE.md` (build/run/config workflow)
-- `docs/TRAVERSAL.md` (code and project traversal map)
-- `docs/architecture/ARCHITECTURE.md` (this file)
-
-## Naming and terminology
-
-- **Canonical runtime name**: `libpolycall-v1`
-- **Legacy label**: `v1trial` appears in some historical files and bindings; treat as historical terminology unless explicitly called out.
-
-## How to navigate quickly
-
-1. Start with `docs/PLAN.md`.
-2. Follow to `docs/USAGE.md` to build/run `libpolycall-v1`.
-3. Use `docs/TRAVERSAL.md` to locate runtime files, language entrypoints, and demo projects.
+1. `README.md` (entrypoint)
+2. `docs/USAGE.md` (verified run commands)
+3. `docs/REFERENCE.md` (source/binding map)
+4. `libpolycall-v1/include/` then `libpolycall-v1/src/` (C API + implementation)
+5. `bindings/` (language adapters)
+6. `projects/` (end-to-end demos)
+7. `tools/scripts/` (maintenance utilities)
