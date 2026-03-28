@@ -1,0 +1,572 @@
+[
+  {
+    "category": "binding-entry",
+    "dependencies": [
+      "polycall.cli.commands.info",
+      "polycall.cli.commands.telemetry",
+      "polycall.cli.commands.test",
+      "polycall.cli.registry",
+      "polycall.utils.logger"
+    ],
+    "file": "bindings/lua-polycall/polycall/cli/main.lua",
+    "symbols": [
+      "configure_logging",
+      "initialize_command_registry",
+      "parse_global_options",
+      "show_help",
+      "show_version"
+    ]
+  },
+  {
+    "category": "binding-entry",
+    "dependencies": [
+      "../src/modules/Router",
+      "../src/modules/State",
+      "../src/modules/StateMachine",
+      "http"
+    ],
+    "file": "bindings/node-polycall/examples/server.js",
+    "symbols": [
+      "handleCORS",
+      "server"
+    ]
+  },
+  {
+    "category": "binding-entry",
+    "dependencies": [
+      "./modules/NetworkEndpoint",
+      "./modules/PolyCallClient",
+      "./modules/ProtocolHandler",
+      "./modules/Router",
+      "./modules/State",
+      "./modules/StateMachine"
+    ],
+    "file": "bindings/node-polycall/src/index.js",
+    "symbols": []
+  },
+  {
+    "category": "binding-entry",
+    "dependencies": [
+      "modules.network_endpoint",
+      "modules.polycall_client",
+      "modules.protocol_handler",
+      "modules.router",
+      "modules.state_machine",
+      "os",
+      "pathlib",
+      "sys"
+    ],
+    "file": "bindings/pypolycall-outdated/__init__.py",
+    "symbols": [
+      "get_binding_info",
+      "verify_libpolycall_integration"
+    ]
+  },
+  {
+    "category": "binding-entry",
+    "dependencies": [
+      "..",
+      "argparse",
+      "asyncio",
+      "sys",
+      "typing"
+    ],
+    "file": "bindings/pypolycall/pypolycall/cli/main.py",
+    "symbols": [
+      "CLI",
+      "__init__",
+      "create_parser",
+      "main",
+      "main_async",
+      "run",
+      "run_info_command",
+      "run_test_command"
+    ]
+  },
+  {
+    "category": "binding-entry",
+    "dependencies": [
+      "..config",
+      "..core",
+      "..utils",
+      ".commands",
+      ".extensions",
+      ".registry",
+      "argparse",
+      "asyncio",
+      "sys",
+      "typing"
+    ],
+    "file": "bindings/pypolycall/pypolycall/pypolycall/cli/main.py",
+    "symbols": [
+      "CLI",
+      "__init__",
+      "_register_builtin_commands",
+      "create_parser",
+      "execute_command",
+      "initialize_core_binding",
+      "main",
+      "run"
+    ]
+  },
+  {
+    "category": "core",
+    "dependencies": [
+      "arpa/inet.h",
+      "errno.h",
+      "fcntl.h",
+      "netinet/in.h",
+      "pthread.h",
+      "stdbool.h",
+      "stdint.h",
+      "stdio.h",
+      "stdlib.h",
+      "string.h",
+      "sys/socket.h",
+      "unistd.h",
+      "windows.h",
+      "winsock2.h",
+      "ws2tcpip.h"
+    ],
+    "file": "libpolycall-v1/include/network.h",
+    "symbols": [
+      "net_cleanup_client_state",
+      "net_cleanup_program",
+      "net_close",
+      "net_init",
+      "net_init_client_state",
+      "net_init_program",
+      "net_is_port_in_use",
+      "net_receive",
+      "net_release_port",
+      "net_run",
+      "net_send"
+    ]
+  },
+  {
+    "category": "core",
+    "dependencies": [
+      "stdbool.h",
+      "stddef.h"
+    ],
+    "file": "libpolycall-v1/include/polycall.h",
+    "symbols": [
+      "polycall_cleanup",
+      "polycall_get_last_error",
+      "polycall_get_version",
+      "polycall_init_with_config",
+      "void"
+    ]
+  },
+  {
+    "category": "core",
+    "dependencies": [],
+    "file": "libpolycall-v1/include/polycall_file_parser.h",
+    "symbols": []
+  },
+  {
+    "category": "core",
+    "dependencies": [
+      "network.h",
+      "polycall.h",
+      "polycall_protocol.h",
+      "polycall_state_machine.h",
+      "stdbool.h",
+      "stdint.h"
+    ],
+    "file": "libpolycall-v1/include/polycall_micro.h",
+    "symbols": [
+      "bool",
+      "polycall_micro_batch_process",
+      "polycall_micro_cleanup",
+      "polycall_micro_collect_garbage",
+      "polycall_micro_create_service",
+      "polycall_micro_create_transform_chain",
+      "polycall_micro_destroy_service",
+      "polycall_micro_destroy_transform_chain",
+      "polycall_micro_filter_commands",
+      "polycall_micro_get_active_services",
+      "polycall_micro_init",
+      "polycall_micro_process_commands",
+      "polycall_micro_status_string",
+      "polycall_micro_transform_command",
+      "polycall_micro_update_service_state",
+      "void"
+    ]
+  },
+  {
+    "category": "core",
+    "dependencies": [
+      "polycall_token.h",
+      "polycall_tokenizer.h",
+      "stdbool.h",
+      "stddef.h"
+    ],
+    "file": "libpolycall-v1/include/polycall_parser.h",
+    "symbols": [
+      "bool",
+      "polycall_ast_add_child",
+      "polycall_ast_apply_transforms",
+      "polycall_ast_create_node",
+      "polycall_ast_create_transforms",
+      "polycall_ast_destroy_node",
+      "polycall_ast_destroy_transforms",
+      "polycall_ast_filter",
+      "polycall_ast_find_node",
+      "polycall_ast_find_nodes",
+      "polycall_ast_map",
+      "polycall_ast_optimize",
+      "polycall_ast_validate",
+      "polycall_ast_visit",
+      "polycall_parser_create",
+      "polycall_parser_destroy",
+      "polycall_parser_get_error",
+      "polycall_parser_parse_file",
+      "polycall_parser_parse_string",
+      "void"
+    ]
+  },
+  {
+    "category": "core",
+    "dependencies": [
+      "network.h",
+      "polycall.h",
+      "polycall_state_machine.h",
+      "stdbool.h",
+      "stdint.h"
+    ],
+    "file": "libpolycall-v1/include/polycall_protocol.h",
+    "symbols": [
+      "polycall_protocol_authenticate",
+      "polycall_protocol_calculate_checksum",
+      "polycall_protocol_can_transition",
+      "polycall_protocol_cleanup",
+      "polycall_protocol_complete_handshake",
+      "polycall_protocol_create_header",
+      "polycall_protocol_get_error",
+      "polycall_protocol_get_state",
+      "polycall_protocol_init",
+      "polycall_protocol_is_authenticated",
+      "polycall_protocol_is_connected",
+      "polycall_protocol_is_error",
+      "polycall_protocol_process",
+      "polycall_protocol_send",
+      "polycall_protocol_set_error",
+      "polycall_protocol_start_handshake",
+      "polycall_protocol_update",
+      "polycall_protocol_verify_checksum",
+      "polycall_protocol_version_compatible"
+    ]
+  },
+  {
+    "category": "core",
+    "dependencies": [
+      "polycall.h",
+      "stdbool.h",
+      "stddef.h",
+      "stdint.h",
+      "stdio.h",
+      "stdlib.h",
+      "string.h",
+      "time.h"
+    ],
+    "file": "libpolycall-v1/include/polycall_state_machine.h",
+    "symbols": [
+      "bool",
+      "polycall_sm_add_state",
+      "polycall_sm_add_transition",
+      "polycall_sm_create_state_snapshot",
+      "polycall_sm_create_with_integrity",
+      "polycall_sm_destroy",
+      "polycall_sm_execute_transition",
+      "polycall_sm_get_state_diagnostics",
+      "polycall_sm_get_state_version",
+      "polycall_sm_lock_state",
+      "polycall_sm_restore_state_from_snapshot",
+      "polycall_sm_unlock_state",
+      "polycall_sm_verify_state_integrity"
+    ]
+  },
+  {
+    "category": "core",
+    "dependencies": [
+      "stdbool.h",
+      "stdint.h"
+    ],
+    "file": "libpolycall-v1/include/polycall_token.h",
+    "symbols": [
+      "PolycallToken",
+      "bool",
+      "polycall_token_chain",
+      "polycall_token_create_array",
+      "polycall_token_destroy_array",
+      "polycall_token_filter",
+      "polycall_token_map",
+      "polycall_value_create",
+      "polycall_value_destroy",
+      "polycall_value_equals"
+    ]
+  },
+  {
+    "category": "core",
+    "dependencies": [
+      "polycall_token.h",
+      "stdbool.h",
+      "stddef.h"
+    ],
+    "file": "libpolycall-v1/include/polycall_tokenizer.h",
+    "symbols": [
+      "polycall_tokenizer_compose_ops",
+      "polycall_tokenizer_create",
+      "polycall_tokenizer_create_ops",
+      "polycall_tokenizer_destroy",
+      "polycall_tokenizer_destroy_ops",
+      "polycall_tokenizer_get_error",
+      "polycall_tokenizer_get_state",
+      "polycall_tokenizer_get_tokens",
+      "polycall_tokenizer_match_identifier",
+      "polycall_tokenizer_match_number",
+      "polycall_tokenizer_match_operator",
+      "polycall_tokenizer_match_string",
+      "polycall_tokenizer_process",
+      "polycall_tokenizer_reset",
+      "polycall_tokenizer_set_input"
+    ]
+  },
+  {
+    "category": "core",
+    "dependencies": [
+      "arpa/inet.h",
+      "fcntl.h",
+      "netinet/in.h",
+      "network.h",
+      "sys/select.h",
+      "sys/socket.h",
+      "unistd.h",
+      "windows.h",
+      "winsock2.h",
+      "ws2tcpip.h"
+    ],
+    "file": "libpolycall-v1/src/network.c",
+    "symbols": [
+      "fcntl",
+      "find_available_port",
+      "ioctlsocket",
+      "net_add_client",
+      "net_cleanup_client_state",
+      "net_cleanup_program",
+      "net_close",
+      "net_init",
+      "net_init_client_state",
+      "net_init_program",
+      "net_is_port_in_use",
+      "net_receive",
+      "net_release_port",
+      "net_remove_client",
+      "net_run",
+      "net_send",
+      "set_nonblocking"
+    ]
+  },
+  {
+    "category": "core",
+    "dependencies": [
+      "polycall.h",
+      "stdlib.h",
+      "string.h"
+    ],
+    "file": "libpolycall-v1/src/polycall.c",
+    "symbols": [
+      "polycall_cleanup",
+      "polycall_get_last_error",
+      "polycall_get_version",
+      "polycall_init_with_config",
+      "set_error"
+    ]
+  },
+  {
+    "category": "core",
+    "dependencies": [
+      "polycall_micro.h",
+      "string.h",
+      "time.h"
+    ],
+    "file": "libpolycall-v1/src/polycall_micro.c",
+    "symbols": [
+      "get_current_timestamp",
+      "polycall_micro_batch_process",
+      "polycall_micro_cleanup",
+      "polycall_micro_collect_garbage",
+      "polycall_micro_create_service",
+      "polycall_micro_create_transform_chain",
+      "polycall_micro_destroy_service",
+      "polycall_micro_destroy_transform_chain",
+      "polycall_micro_filter_commands",
+      "polycall_micro_get_active_services",
+      "polycall_micro_init",
+      "polycall_micro_process_commands",
+      "polycall_micro_status_string",
+      "polycall_micro_transform_command",
+      "polycall_micro_update_service_state",
+      "reset_command_array",
+      "reset_service_state"
+    ]
+  },
+  {
+    "category": "core",
+    "dependencies": [
+      "polycall_parser.h",
+      "stdarg.h",
+      "stdio.h",
+      "stdlib.h",
+      "string.h"
+    ],
+    "file": "libpolycall-v1/src/polycall_parser.c",
+    "symbols": [
+      "advance_token",
+      "allocate_node",
+      "collect_optimized_node",
+      "count_node",
+      "create_node_pool",
+      "destroy_node_pool",
+      "expect_token",
+      "optimize_node",
+      "parse_block",
+      "parse_expression",
+      "parse_function",
+      "parse_statement",
+      "parse_tokens",
+      "polycall_ast_add_child",
+      "polycall_ast_apply_transforms",
+      "polycall_ast_create_node",
+      "polycall_ast_create_transforms",
+      "polycall_ast_destroy_node",
+      "polycall_ast_destroy_transforms",
+      "polycall_ast_filter",
+      "polycall_ast_find_node",
+      "polycall_ast_find_nodes",
+      "polycall_ast_get_attributes",
+      "polycall_ast_get_location",
+      "polycall_ast_map",
+      "polycall_ast_optimize",
+      "polycall_ast_set_attributes",
+      "polycall_ast_set_location",
+      "polycall_ast_validate",
+      "polycall_ast_visit",
+      "polycall_parser_create",
+      "polycall_parser_destroy",
+      "polycall_parser_get_error",
+      "polycall_parser_parse_file",
+      "polycall_parser_parse_string",
+      "set_parser_error",
+      "transform",
+      "validate_node_structure"
+    ]
+  },
+  {
+    "category": "core",
+    "dependencies": [
+      "polycall_protocol.h",
+      "stdlib.h",
+      "string.h",
+      "time.h"
+    ],
+    "file": "libpolycall-v1/src/polycall_protocol.c",
+    "symbols": [
+      "polycall_protocol_authenticate",
+      "polycall_protocol_calculate_checksum",
+      "polycall_protocol_can_transition",
+      "polycall_protocol_cleanup",
+      "polycall_protocol_complete_handshake",
+      "polycall_protocol_create_header",
+      "polycall_protocol_get_state",
+      "polycall_protocol_init",
+      "polycall_protocol_is_authenticated",
+      "polycall_protocol_is_connected",
+      "polycall_protocol_is_error",
+      "polycall_protocol_process",
+      "polycall_protocol_send",
+      "polycall_protocol_set_error",
+      "polycall_protocol_start_handshake",
+      "polycall_protocol_update",
+      "polycall_protocol_verify_checksum",
+      "polycall_protocol_version_compatible",
+      "transition_protocol_state",
+      "validate_message_header"
+    ]
+  },
+  {
+    "category": "core",
+    "dependencies": [
+      "polycall.h",
+      "polycall_state_machine.h",
+      "stdlib.h",
+      "string.h",
+      "time.h"
+    ],
+    "file": "libpolycall-v1/src/polycall_state_machine.c",
+    "symbols": [
+      "calculate_state_checksum",
+      "init_default_transitions",
+      "init_state",
+      "initialize_state_machine",
+      "on_error",
+      "on_init",
+      "on_paused",
+      "on_ready",
+      "on_running",
+      "polycall_sm_add_state",
+      "polycall_sm_add_transition",
+      "polycall_sm_create_state_snapshot",
+      "polycall_sm_create_with_integrity",
+      "polycall_sm_destroy",
+      "polycall_sm_execute_transition",
+      "polycall_sm_get_state_diagnostics",
+      "polycall_sm_get_state_version",
+      "polycall_sm_lock_state",
+      "polycall_sm_restore_state_from_snapshot",
+      "polycall_sm_unlock_state",
+      "polycall_sm_verify_state_integrity",
+      "update_state_timestamp"
+    ]
+  },
+  {
+    "category": "core",
+    "dependencies": [],
+    "file": "libpolycall-v1/src/polycall_token.c",
+    "symbols": []
+  },
+  {
+    "category": "core",
+    "dependencies": [
+      "ctype.h",
+      "polycall_tokenizer.h",
+      "stdlib.h",
+      "string.h"
+    ],
+    "file": "libpolycall-v1/src/polycall_tokenizer.c",
+    "symbols": [
+      "create_token",
+      "is_identifier_part",
+      "is_identifier_start",
+      "polycall_strdup",
+      "polycall_tokenizer_compose_ops",
+      "polycall_tokenizer_create",
+      "polycall_tokenizer_create_ops",
+      "polycall_tokenizer_destroy",
+      "polycall_tokenizer_destroy_ops",
+      "polycall_tokenizer_get_error",
+      "polycall_tokenizer_get_state",
+      "polycall_tokenizer_get_tokens",
+      "polycall_tokenizer_match_identifier",
+      "polycall_tokenizer_match_number",
+      "polycall_tokenizer_match_operator",
+      "polycall_tokenizer_match_string",
+      "polycall_tokenizer_process",
+      "polycall_tokenizer_reset",
+      "polycall_tokenizer_set_input",
+      "reset_state",
+      "set_error_state"
+    ]
+  }
+]

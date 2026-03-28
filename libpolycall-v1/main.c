@@ -3,6 +3,7 @@
 #include "polycall_state_machine.h"
 #include "polycall_tokenizer.h"
 #include "network.h"
+#include "daemon_mode.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,6 +13,8 @@
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#else
+#include <unistd.h>
 #endif
 
 #define PPI_VERSION "1.0.0"
@@ -36,7 +39,7 @@ typedef struct {
 typedef struct {
     bool interactive_mode;
     const char* config_file;
-    // Add other configuration fields as needed
+    PolyCallDaemonOptions daemon_options;
 } RuntimeConfig;
 
 // Point-free style operation types
@@ -53,6 +56,8 @@ typedef struct {
     PolyCall_StateSnapshot snapshots[POLYCALL_MAX_STATES];
     bool has_snapshot[POLYCALL_MAX_STATES];
     PortMappingArray port_mappings;
+    polycall_decision_t consensus_state;
+    bool consensus_maybe_persisted;
     bool interactive_mode;
 #ifdef _WIN32
     bool wsaInitialized;
@@ -62,12 +67,24 @@ typedef struct {
 
 // Global runtime instance
 static PPI_Runtime g_runtime = {0};
+static RuntimeConfig g_config = {
+    .interactive_mode = true,
+    .config_file = NULL,
+    .daemon_options = {
+        .detach = false,
+        .pid_file = NULL,
+        .log_file = NULL
+    }
+};
 
 // Forward declarations of command handlers
 static bool cmd_init(const PPI_Runtime* runtime, const char* arg1, const char* arg2, const char* arg3);
 static bool cmd_add_state(const PPI_Runtime* runtime, const char* name, const char* arg2, const char* arg3);
 static bool cmd_help(const PPI_Runtime* runtime, const char* arg1, const char* arg2, const char* arg3);
 static bool cmd_quit(const PPI_Runtime* runtime, const char* arg1, const char* arg2, const char* arg3);
+static bool parse_decision_state(const char* input, polycall_decision_t* decision);
+static const char* decision_to_string(polycall_decision_t decision);
+static bool handle_telemetry_namespace(const char* arg1, const char* arg2, const char* arg3);
 
 // State callbacks
 static void on_init(polycall_context_t ctx) {
@@ -174,6 +191,60 @@ static bool cmd_quit(const PPI_Runtime* runtime, const char* arg1, const char* a
     return true;
 }
 
+static bool parse_decision_state(const char* input, polycall_decision_t* decision) {
+    if (!input || !decision) {
+        return false;
+    }
+
+    if (strcmp(input, "yes") == 0) {
+        *decision = POLYCALL_DECISION_YES;
+        return true;
+    }
+    if (strcmp(input, "no") == 0) {
+        *decision = POLYCALL_DECISION_NO;
+        return true;
+    }
+    if (strcmp(input, "maybe") == 0) {
+        *decision = POLYCALL_DECISION_MAYBE;
+        return true;
+    }
+    return false;
+}
+
+static const char* decision_to_string(polycall_decision_t decision) {
+    switch (decision) {
+        case POLYCALL_DECISION_YES: return "yes";
+        case POLYCALL_DECISION_NO: return "no";
+        case POLYCALL_DECISION_MAYBE: return "maybe";
+        default: return "unknown";
+    }
+}
+
+static bool handle_telemetry_namespace(const char* arg1, const char* arg2, const char* arg3) {
+    if (!arg1 || strcmp(arg1, "consensus") != 0) {
+        printf("Usage: telemetry consensus --state <yes|no|maybe>\n");
+        return false;
+    }
+
+    if (!arg2 || strcmp(arg2, "--state") != 0 || !arg3) {
+        printf("Usage: telemetry consensus --state <yes|no|maybe>\n");
+        return false;
+    }
+
+    polycall_decision_t decision;
+    if (!parse_decision_state(arg3, &decision)) {
+        printf("Invalid consensus state '%s'. Expected yes, no, or maybe.\n", arg3);
+        return false;
+    }
+
+    g_runtime.consensus_state = decision;
+    g_runtime.consensus_maybe_persisted = (decision == POLYCALL_DECISION_MAYBE);
+    printf("Telemetry consensus state set to '%s'%s\n",
+           decision_to_string(decision),
+           g_runtime.consensus_maybe_persisted ? " (persisted)" : "");
+    return true;
+}
+
 static bool cmd_add_state(const PPI_Runtime* runtime, const char* name, const char* arg2, const char* arg3) {
     (void)arg2; (void)arg3;
     
@@ -235,6 +306,7 @@ static bool cmd_help(const PPI_Runtime* runtime, const char* arg1, const char* a
     printf("  execute NAME          - Execute a transition\n");
     
     printf("\nMiscellaneous Commands:\n");
+    printf("  telemetry consensus --state <yes|no|maybe> - Set trinary consensus state\n");
     printf("  help                - Show this help message\n");
     printf("  quit                - Exit the program\n");
     
@@ -367,8 +439,10 @@ static bool initialize_runtime(void) {
         return false;
     }
 
-g_runtime.state_machine = NULL;
-g_runtime.running = true;
+    g_runtime.state_machine = NULL;
+    g_runtime.running = true;
+    g_runtime.consensus_state = POLYCALL_DECISION_MAYBE;
+    g_runtime.consensus_maybe_persisted = false;
     return true;
 }
 
@@ -401,6 +475,13 @@ static void process_command(PPI_Runtime* runtime, const char* input) {
     char* arg3 = strtok(NULL, " ");
 
     if (!cmd) return;
+
+    if (strcmp(cmd, "telemetry") == 0) {
+        if (!handle_telemetry_namespace(arg1, arg2, arg3)) {
+            printf("Usage: telemetry consensus --state <yes|no|maybe>\n");
+        }
+        return;
+    }
 
     // Find and execute command
     for (size_t i = 0; i < sizeof(COMMANDS) / sizeof(COMMANDS[0]); i++) {
@@ -692,6 +773,8 @@ static void cleanup_runtime(void) {
         g_runtime.wsaInitialized = false;
     }
 #endif
+
+    daemon_pidfile_remove();
 }
 
 
@@ -711,17 +794,56 @@ static void register_signal_handlers(void) {
     signal(SIGTERM, signal_handler);
 }
 
+static void print_usage(const char* program_name) {
+    printf("Usage: %s [-f <config>] [--detach] [--pid-file <path>] [--log-file <path>]\n", program_name);
+    printf("  -f <config>        Run non-interactive mode with config file\n");
+    printf("  --detach           Run as daemon (POSIX only)\n");
+    printf("  --pid-file <path>  Write and lock daemon PID file\n");
+    printf("  --log-file <path>  Redirect daemon stdout/stderr to file\n");
+}
 
-int main(int argc, char* argv[]) {
-    bool non_interactive = false;
-    const char* config_file = NULL;
-    
-    // Parse command line arguments
+static bool parse_arguments(int argc, char* argv[], RuntimeConfig* config) {
+    if (!config) {
+        return false;
+    }
+
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-f") == 0 && i + 1 < argc) {
-            config_file = argv[++i];
-            non_interactive = true;
+            config->config_file = argv[++i];
+            config->interactive_mode = false;
+        } else if (strcmp(argv[i], "--detach") == 0) {
+            config->daemon_options.detach = true;
+            config->interactive_mode = false;
+        } else if (strcmp(argv[i], "--pid-file") == 0 && i + 1 < argc) {
+            config->daemon_options.pid_file = argv[++i];
+        } else if (strcmp(argv[i], "--log-file") == 0 && i + 1 < argc) {
+            config->daemon_options.log_file = argv[++i];
+        } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+            print_usage(argv[0]);
+            exit(0);
+        } else {
+            fprintf(stderr, "Unknown or incomplete option: %s\n", argv[i]);
+            print_usage(argv[0]);
+            return false;
         }
+    }
+
+    if (config->daemon_options.detach && !POLYCALL_HAS_POSIX_DAEMON) {
+        fprintf(stderr, "Warning: --detach is only supported on POSIX platforms. Running in foreground mode.\n");
+        config->daemon_options.detach = false;
+    }
+
+    return true;
+}
+
+int main(int argc, char* argv[]) {
+    if (!parse_arguments(argc, argv, &g_config)) {
+        return 1;
+    }
+
+    if (g_config.daemon_options.detach && !daemonize_process(&g_config.daemon_options)) {
+        fprintf(stderr, "Failed to daemonize process\n");
+        return 1;
     }
 
     if (!initialize_runtime()) {
@@ -729,70 +851,78 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    if (non_interactive) {
-        // Handle non-interactive mode with config file
-        FILE* fp = fopen(config_file, "r");
-        if (!fp) {
-            fprintf(stderr, "Failed to open config file: %s\n", config_file);
-            cleanup_runtime();
-            return 1;
-        }
+    if (!daemon_pidfile_create(g_config.daemon_options.pid_file)) {
+        cleanup_runtime();
+        return 1;
+    }
 
-        char line[MAX_INPUT];
+    if (!g_config.interactive_mode) {
+        // Handle non-interactive mode with config file
+        FILE* fp = NULL;
         bool network_started = false;
         uint16_t port_number = 8080; // Default port
 
-        while (fgets(line, sizeof(line), fp)) {
-            // Remove newline and whitespace
-            char* trimmed = line;
-            size_t len = strlen(trimmed);
-            while (len > 0 && (trimmed[len-1] == '\n' || trimmed[len-1] == '\r')) {
-                trimmed[--len] = '\0';
+        if (g_config.config_file) {
+            fp = fopen(g_config.config_file, "r");
+            if (!fp) {
+                fprintf(stderr, "Failed to open config file: %s\n", g_config.config_file);
+                cleanup_runtime();
+                return 1;
             }
 
-            // Skip empty lines and comments
-            if (len == 0 || trimmed[0] == '#') continue;
+            char line[MAX_INPUT];
+            while (fgets(line, sizeof(line), fp)) {
+                // Remove newline and whitespace
+                char* trimmed = line;
+                size_t len = strlen(trimmed);
+                while (len > 0 && (trimmed[len-1] == '\n' || trimmed[len-1] == '\r')) {
+                    trimmed[--len] = '\0';
+                }
 
-            // Parse configuration commands
-            char cmd[32], value[256];
-            if (sscanf(trimmed, "%31s %255s", cmd, value) == 2) {
-                if (strcmp(cmd, "port") == 0) {
-                    // Handle port mapping (format: "port host:container")
-                    uint16_t host_port, container_port;
-                    if (sscanf(value, "%hu:%hu", &host_port, &container_port) == 2) {
-                        port_number = container_port;
-                    }
-                } else if (strcmp(cmd, "network") == 0 && strcmp(value, "start") == 0) {
-                    // Start network services
-                    NetworkProgram* program = calloc(1, sizeof(NetworkProgram));
-                    if (program) {
-                        net_init_program(program);
-                        
-                        // Configure port if specified
-                        if (program->endpoints && program->count > 0) {
-                            program->endpoints[0].port = port_number;
-                            
-                            // Set up handlers
-                            program->handlers.on_receive = on_network_receive;
-                            program->handlers.on_connect = on_network_connect;
-                            program->handlers.on_disconnect = on_network_disconnect;
-                            
-                            g_runtime.programs[g_runtime.program_count++] = program;
-                            network_started = true;
-                            printf("Network services started on port %d\n", port_number);
-                        } else {
-                            free(program);
-                            fprintf(stderr, "Failed to start network services\n");
+                // Skip empty lines and comments
+                if (len == 0 || trimmed[0] == '#') continue;
+
+                // Parse configuration commands
+                char cmd[32], value[256];
+                if (sscanf(trimmed, "%31s %255s", cmd, value) == 2) {
+                    if (strcmp(cmd, "port") == 0) {
+                        // Handle port mapping (format: "port host:container")
+                        uint16_t host_port, container_port;
+                        if (sscanf(value, "%hu:%hu", &host_port, &container_port) == 2) {
+                            port_number = container_port;
+                        }
+                    } else if (strcmp(cmd, "network") == 0 && strcmp(value, "start") == 0) {
+                        // Start network services
+                        NetworkProgram* program = calloc(1, sizeof(NetworkProgram));
+                        if (program) {
+                            net_init_program(program);
+
+                            // Configure port if specified
+                            if (program->endpoints && program->count > 0) {
+                                program->endpoints[0].port = port_number;
+
+                                // Set up handlers
+                                program->handlers.on_receive = on_network_receive;
+                                program->handlers.on_connect = on_network_connect;
+                                program->handlers.on_disconnect = on_network_disconnect;
+
+                                g_runtime.programs[g_runtime.program_count++] = program;
+                                network_started = true;
+                                printf("Network services started on port %d\n", port_number);
+                            } else {
+                                free(program);
+                                fprintf(stderr, "Failed to start network services\n");
+                            }
                         }
                     }
                 }
             }
+
+            fclose(fp);
         }
 
-        fclose(fp);
-
         if (!network_started) {
-            fprintf(stderr, "Warning: No network services were started\n");
+            fprintf(stderr, "Warning: No network services were started. Running idle loop.\n");
         }
 
         // Enter non-interactive event loop
