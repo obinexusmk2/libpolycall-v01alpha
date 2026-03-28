@@ -1,0 +1,3 @@
+behavior: ack_denied
+ack_received: false
+error_code: HITL_REJECTED

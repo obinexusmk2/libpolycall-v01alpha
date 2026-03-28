@@ -25,6 +25,7 @@ CFLAGS ?= -Wall -Wextra
 LDFLAGS ?=
 LDLIBS ?= -pthread -lssl -lcrypto
 PLATFORM_LIBS :=
+LINK_LIBS = $(LDLIBS) $(PLATFORM_LIBS)
 
 # Platform-specific settings
 ifeq ($(OS),Windows_NT)
@@ -32,7 +33,6 @@ ifeq ($(OS),Windows_NT)
     SHARED_EXT := dll
     SHARED_FLAG := -shared
     PLATFORM_LIBS += -lws2_32
-    LDLIBS += -lws2_32
     CPPFLAGS += -D_WIN32 -DPOLYCALL_DLL_EXPORT
 
     # cmd.exe-friendly commands
@@ -48,6 +48,10 @@ else
 endif
 
 # Outputs
+# Intended artifacts:
+# - Static library: reusable archive for static linking.
+# - Shared library: dynamically loadable library for runtime linking.
+# - Executable: CLI binary linked against the static library.
 LIB_NAME := libpolycall
 STATIC_LIB := $(LIB_DIR)/$(LIB_NAME).a
 SHARED_LIB := $(LIB_DIR)/$(LIB_NAME).$(SHARED_EXT)
@@ -89,14 +93,10 @@ $(STATIC_LIB): $(OBJS)
 	$(AR) rcs $@ $^
 
 $(SHARED_LIB): $(OBJS)
-	$(CC) $(SHARED_FLAG) -o $@ $^ $(LDFLAGS) $(LDLIBS) $(PLATFORM_LIBS)
+	$(CC) $(SHARED_FLAG) -o $@ $^ $(LDFLAGS) $(LINK_LIBS)
 
 $(EXECUTABLE): $(MAIN_OBJ) $(STATIC_LIB)
-	$(CC) -o $@ $(MAIN_OBJ) $(STATIC_LIB) $(LDFLAGS) $(LDLIBS) $(PLATFORM_LIBS)
-	$(CC) $(SHARED_FLAG) -o $@ $^ $(LDFLAGS) $(LDLIBS)
-
-$(EXECUTABLE): $(MAIN_OBJ) $(STATIC_LIB)
-	$(CC) -o $@ $(MAIN_OBJ) $(STATIC_LIB) $(LDFLAGS) $(LDLIBS)
+	$(CC) -o $@ $(MAIN_OBJ) $(STATIC_LIB) $(LDFLAGS) $(LINK_LIBS)
 
 clean:
 	@$(call RM_RF,$(BUILD_DIR))

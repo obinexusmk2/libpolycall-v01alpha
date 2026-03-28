@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "description": "Canonical acknowledgment timeline constraints in milliseconds.",
+  "scenarios": [
+    {
+      "id": "ack_in_time",
+      "ack_deadline_ms": 5000,
+      "events": [
+        {"name": "decision_committed", "at_ms": 0},
+        {"name": "ack_received", "at_ms": 3200}
+      ],
+      "expected_ack_status": "ON_TIME"
+    },
+    {
+      "id": "ack_late",
+      "ack_deadline_ms": 5000,
+      "events": [
+        {"name": "decision_committed", "at_ms": 0},
+        {"name": "ack_received", "at_ms": 6100}
+      ],
+      "expected_ack_status": "LATE"
+    },
+    {
+      "id": "ack_missing",
+      "ack_deadline_ms": 5000,
+      "events": [
+        {"name": "decision_committed", "at_ms": 0}
+      ],
+      "expected_ack_status": "MISSING"
+    }
+  ]
+}

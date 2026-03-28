@@ -572,3 +572,47 @@ MIT License - LibPolyCall Trial v1
 ---
 
 > **Important**: PyPolyCall is an ADAPTER binding. All execution flows through polycall.exe runtime. This binding provides the interface translation layer while maintaining strict protocol compliance with the LibPolyCall Trial v1 specification.
+---
+
+## Canonical Package Root and Stable API Contract
+
+### Canonical import root
+
+Use **`pypolycall`** as the only canonical package root.
+
+```python
+from pypolycall.core import ProtocolBinding
+from pypolycall.protocol.constants import DEFAULT_POLYCALL_HOST, DEFAULT_POLYCALL_PORT
+```
+
+The nested namespace `pypolycall.pypolycall` is now a **deprecated compatibility layer** and will be removed in a future major release.
+
+### `ProtocolBinding` public API contract
+
+`ProtocolBinding` is a stable adapter API with the following contract:
+
+- **Constructor**
+  - `ProtocolBinding(polycall_host: str = DEFAULT_POLYCALL_HOST, polycall_port: int = DEFAULT_POLYCALL_PORT, binding_config: Optional[dict] = None)`
+- **Stable async methods**
+  - `connect() -> bool`
+  - `authenticate(credentials: dict) -> bool`
+  - `execute_operation(operation: str, params: dict) -> Any`
+  - `shutdown() -> None`
+- **Compatibility shim (deprecated)**
+  - `execute_request(request_path: str, params: dict) -> Any`  
+    Emits `DeprecationWarning`; use `execute_operation`.
+- **Stable attributes**
+  - `polycall_host`
+  - `polycall_port`
+  - `config`
+- **Stable properties**
+  - `is_connected`
+  - `is_authenticated`
+  - `protocol_handler` (reserved extension point)
+
+### Stable constants module path
+
+- `pypolycall.protocol.constants.DEFAULT_POLYCALL_HOST`
+- `pypolycall.protocol.constants.DEFAULT_POLYCALL_PORT`
+
+These constants should be used by applications and tests instead of hard-coded host/port values.

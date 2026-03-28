@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "scenario_id": "daemon.happy_yes",
+  "domain": "daemon",
+  "decision": "YES",
+  "status": "approved",
+  "includes": [
+    "start_allowed.yaml"
+  ],
+  "input": {
+    "operation": "restart"
+  },
+  "expected": {
+    "command_executed": true,
+    "ack_received": true
+  }
+}

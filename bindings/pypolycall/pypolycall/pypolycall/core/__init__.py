@@ -1,5 +1,3 @@
-"""PyPolyCall core exports for available modules."""
+"""Deprecated compatibility layer for `pypolycall.pypolycall.core`."""
 
-from .binding import ProtocolBinding
-
-__all__ = ["ProtocolBinding"]
+from ...core import *  # noqa: F401,F403
