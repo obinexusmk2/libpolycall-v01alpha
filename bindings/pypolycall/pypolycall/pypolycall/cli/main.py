@@ -6,14 +6,13 @@ Extensible Command-Line Interface for PyPolyCall
 import sys
 import argparse
 import asyncio
-from typing import List, Optional
-from ..core import ProtocolBinding
-from ..config import ConfigManager
-from ..utils import Logger
+from typing import Any, List, Optional
+
+import logging
 from .registry import CommandRegistry
 from .extensions import ExtensionManager
 
-logger = Logger.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 class CLI:
     """
@@ -27,21 +26,24 @@ class CLI:
     """
     
     def __init__(self):
+        from ..config.manager import ConfigManager
+
         self.config_manager = ConfigManager()
         self.command_registry = CommandRegistry()
         self.extension_manager = ExtensionManager()
-        self.core_binding: Optional[ProtocolBinding] = None
+        self.core_binding: Optional[Any] = None
         
         # Register built-in commands
         self._register_builtin_commands()
     
     def _register_builtin_commands(self) -> None:
-        """Register built-in CLI commands"""
-        from .commands import (
-            InfoCommand, TestCommand, ConnectCommand, 
-            ConfigCommand, TelemetryCommand
-        )
-        
+        """Register built-in CLI commands from concrete command modules."""
+        from .commands.info import InfoCommand
+        from .commands.test import TestCommand
+        from .commands.connect import ConnectCommand
+        from .commands.config import ConfigCommand
+        from .commands.telemetry import TelemetryCommand
+
         self.command_registry.register('info', InfoCommand())
         self.command_registry.register('test', TestCommand())
         self.command_registry.register('connect', ConnectCommand())
@@ -110,6 +112,8 @@ class CLI:
             config = await self.config_manager.get_default_config()
         
         # Create core binding
+        from ..core.binding import ProtocolBinding
+
         self.core_binding = ProtocolBinding(
             polycall_host=host,
             polycall_port=port,
@@ -151,7 +155,11 @@ class CLI:
         args = parser.parse_args(argv)
         
         # Setup logging
-        Logger.setup_logging(args.log_level)
+        try:
+            from ..utils.logger import Logger
+            Logger.setup_logging(args.log_level)
+        except Exception:
+            logging.basicConfig(level=getattr(logging, args.log_level, logging.INFO))
         
         try:
             # Load extensions if specified
