@@ -1,0 +1,39 @@
+{
+  "states": [
+    {
+      "id": "DEC-001",
+      "title": "Adopt docs index generator",
+      "status": "resolved",
+      "owner": "docs-team",
+      "note": "Approved for all repositories."
+    },
+    {
+      "id": "DEC-002",
+      "title": "Deprecate legacy node binding",
+      "status": "unresolved",
+      "owner": "platform-team",
+      "note": "Awaiting impact analysis for enterprise users."
+    },
+    {
+      "id": "DEC-003",
+      "title": "Introduce maybe-state rollout flag",
+      "status": "maybe",
+      "owner": "release-team",
+      "note": "Pending SRE confidence metrics after canary."
+    },
+    {
+      "id": "DEC-004",
+      "title": "Standardize C header naming",
+      "status": "resolved",
+      "owner": "core-runtime",
+      "note": "Completed in v1 alpha branch."
+    },
+    {
+      "id": "DEC-005",
+      "title": "Archive migration_backup examples",
+      "status": "unresolved",
+      "owner": "repo-maintainers",
+      "note": "Need confirmation from docs owners."
+    }
+  ]
+}
