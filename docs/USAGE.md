@@ -1,4 +1,26 @@
 
+## Daemon mode (POSIX)
+
+`libpolycall-v1/main.c` now supports foreground mode by default and optional daemon mode.
+
+```bash
+# Foreground (default, recommended for development)
+./build/bin/polycall -f config.Polycallfile
+
+# Detached daemon mode (POSIX platforms)
+./build/bin/polycall -f config.Polycallfile --detach --pid-file /var/run/polycall.pid --log-file /var/log/polycall.log
+```
+
+### Daemon options
+
+- `--detach`: use POSIX daemonization (`fork` -> `setsid` -> second `fork`, then `umask`, `chdir("/")`, stdio redirection).
+- `--pid-file <path>`: create and lock a pidfile; it is removed during normal shutdown and signal-triggered shutdown.
+- `--log-file <path>`: append daemon stdout/stderr to the provided log file (otherwise they are redirected to `/dev/null`).
+
+### Non-POSIX behavior
+
+On Windows, `--detach` is currently not supported. PolyCall logs a warning and continues in foreground mode.
+
 
 1. Create the base configuration directory:
 ```bash
