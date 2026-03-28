@@ -1064,7 +1064,7 @@ int main(int argc, char* argv[]) {
         printf("Running in non-interactive mode...\n");
         g_runtime.running = true;
 
-        while (g_runtime.running) {
+        while (g_runtime.running && !g_shutdown_requested) {
             // Process all network programs
             for (size_t i = 0; i < g_runtime.program_count; i++) {
                 NetworkProgram* program = g_runtime.programs[i];
@@ -1082,7 +1082,7 @@ int main(int argc, char* argv[]) {
         char input[MAX_INPUT];
         printf("PolyCall CLI v%s - Type 'help' for commands\n", PPI_VERSION);
 
-        while (g_runtime.running) {
+        while (g_runtime.running && !g_shutdown_requested) {
             printf("\n> ");
             if (!fgets(input, sizeof(input), stdin)) {
                 break;
