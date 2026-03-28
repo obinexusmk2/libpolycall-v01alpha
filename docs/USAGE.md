@@ -1,91 +1,43 @@
-# PolyCall Usage
+# Usage: practical "how to run"
 
-## Interactive mode (default)
-Run without `-f` to use the CLI shell:
+This guide only includes commands validated from the repository root (`/workspace/libpolycall-v01alpha`) in this environment.
 
-```bash
-./bin/polycall
-```
-
-This mode stays attached to your terminal and supports commands like `help`, `start_network`, and `quit`.
-
-## Non-interactive mode
-Use `-f` to start from a config file:
+## 1) Run the prebuilt core CLI (`libpolycall-v1`)
 
 ```bash
-./bin/polycall -f config.Polycallfile
+chmod +x libpolycall-v1/bin/polycall
+printf 'help\nquit\n' | libpolycall-v1/bin/polycall
 ```
 
-Example config:
+What this does:
+- marks the bundled CLI binary executable,
+- starts it,
+- prints command help,
+- exits cleanly.
 
-```ini
-# config.Polycallfile
-server node 3000:8080
-server python 3001:8081
-port 3000:8080
-network start
-```
-
-## Detached daemon mode
-Non-interactive mode can be daemonized with `--detach`:
+## 2) Smoke test the Python binding tests (`bindings/pypolycall`)
 
 ```bash
-./bin/polycall -f config.Polycallfile --detach
+pytest -q bindings/pypolycall/tests/unit/config/test_manager.py
 ```
 
-Optional daemon flags:
-
-- `--pidfile <path>`: write daemon PID and hold an exclusive lock.
-- `--logfile <path>`: redirect stdout/stderr to this file (append mode).
-
-Example:
+## 3) Smoke test the Node.js binding module export (`bindings/node-polycall`)
 
 ```bash
-./bin/polycall -f config.Polycallfile --detach \
-  --pidfile /var/run/polycall.pid \
-  --logfile /var/log/polycall.log
+node -e "const m=require('./bindings/node-polycall/src/index.js'); console.log(Object.keys(m))"
 ```
 
-### Daemon lifecycle
-When `--detach` is used, PolyCall follows a dedicated daemonization flow:
+Expected result: a list of exported modules such as `PolyCallClient`, `Router`, and `ProtocolHandler`.
 
-1. `fork()` and parent exits.
-2. `setsid()` to become session leader.
-3. Second `fork()` and parent exits.
-4. `umask(027)` and `chdir("/")`.
-5. Redirect `stdin` to `/dev/null`; redirect `stdout/stderr` to logfile (or `/dev/null` if omitted).
-6. Create and lock pidfile (if provided) and write daemon PID.
-
-On shutdown (`SIGINT`, `SIGTERM`, or normal exit), runtime cleanup releases resources and removes the pidfile.
-
-## Ops commands
-Start daemon:
+## 4) Optional: inspect major docs quickly
 
 ```bash
-./bin/polycall -f config.Polycallfile --detach --pidfile /tmp/polycall.pid --logfile /tmp/polycall.log
+sed -n '1,160p' README.md
+sed -n '1,200p' docs/architecture/ARCHITECTURE.md
+sed -n '1,240p' docs/REFERENCE.md
 ```
 
-Check status:
+## Notes
 
-```bash
-cat /tmp/polycall.pid
-ps -fp "$(cat /tmp/polycall.pid)"
-```
-
-Tail logs:
-
-```bash
-tail -f /tmp/polycall.log
-```
-
-Stop daemon:
-
-```bash
-kill -TERM "$(cat /tmp/polycall.pid)"
-```
-
-Verify port listeners:
-
-```bash
-ss -ltnp | grep polycall
-```
+- The build path exists at `libpolycall-v1/Makefile`, but in this repo snapshot `make -C libpolycall-v1 all` currently fails due duplicate/corrupted content in `libpolycall-v1/src/polycall_tokenizer.c`. That compile command is intentionally **not** part of the run baseline.
+- All paths in this guide are repo-relative.
