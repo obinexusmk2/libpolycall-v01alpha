@@ -1,0 +1,3 @@
+behavior: start_allowed
+command_executed: true
+ack_received: true

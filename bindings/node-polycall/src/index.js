@@ -3,7 +3,7 @@ const Router = require('./modules/Router');
 const StateMachine = require('./modules/StateMachine');
 const State = require('./modules/State');
 const NetworkEndpoint = require('./modules/NetworkEndpoint');
-const { ProtocolHandler, PROTOCOL_CONSTANTS, MESSAGE_TYPES, PROTOCOL_FLAGS } = require('./modules/ProtocolHandler');
+const { ProtocolHandler, PROTOCOL_CONSTANTS, MESSAGE_TYPES, PROTOCOL_FLAGS, TRINARY_DECISION } = require('./modules/ProtocolHandler');
 
 // index.js - PolyCall API Export
 
@@ -16,5 +16,6 @@ module.exports = {
     ProtocolHandler,
     PROTOCOL_CONSTANTS,
     MESSAGE_TYPES,
-    PROTOCOL_FLAGS
+    PROTOCOL_FLAGS,
+    TRINARY_DECISION
 };

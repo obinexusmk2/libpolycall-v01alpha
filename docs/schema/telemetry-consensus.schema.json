@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libpolycall.dev/schema/telemetry-consensus.schema.json",
+  "title": "Telemetry Consensus Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_type",
+    "state",
+    "session_id",
+    "ack_status",
+    "persisted",
+    "storage_key",
+    "timestamp"
+  ],
+  "properties": {
+    "event_type": {
+      "const": "telemetry.consensus"
+    },
+    "state": {
+      "type": "string",
+      "enum": ["YES", "NO", "MAYBE"]
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ack_status": {
+      "type": "string",
+      "minLength": 1
+    },
+    "persisted": {
+      "type": "boolean"
+    },
+    "storage_key": {
+      "type": ["string", "null"]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "scenario_id": "daemon.rejection_no",
+  "domain": "daemon",
+  "decision": "NO",
+  "status": "rejected",
+  "includes": [
+    "start_blocked.yaml"
+  ],
+  "input": {
+    "operation": "restart"
+  },
+  "expected": {
+    "command_executed": false,
+    "ack_received": false
+  }
+}
