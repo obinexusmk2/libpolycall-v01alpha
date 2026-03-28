@@ -158,3 +158,22 @@ echo "port=3004:8084" > /opt/polycall/services/newlang/.polycallrc
 3. Restart the PolyCall service to apply the new configuration.
 
 This setup allows PolyCall to act as a central coordinator for all your language bindings while maintaining clean separation between services.
+## Trinary consensus CLI usage
+
+PolyCall now supports a first-class trinary consensus state (`yes`, `no`, `maybe`) and corresponding protocol semantics.
+
+### Interactive CLI namespace
+
+```bash
+telemetry consensus --state yes
+telemetry consensus --state no
+telemetry consensus --state maybe
+```
+
+`maybe` is tracked as persisted for acknowledgment handling.
+
+### Behavior summary
+
+- `telemetry consensus --state maybe` marks the local consensus as `MAYBE` and enables persistence metadata.
+- Incoming `CONSENSUS_ECHO` messages are automatically answered with `CONSENSUS_ACK`.
+- `CONSENSUS_ACK` updates the local correlation/ack tracking and persisted-MAYBE state.

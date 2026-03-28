@@ -6,7 +6,8 @@ Verify PyPolyCall binding follows protocol law
 import pytest
 import asyncio
 from pypolycall.core import ProtocolBinding
-from pypolycall.protocol.constants import DEFAULT_POLYCALL_PORT
+from pypolycall.core.protocol import ProtocolHandler, TrinaryDecision, MessageTypes
+DEFAULT_POLYCALL_PORT = 8084
 
 class TestProtocolCompliance:
     """Test protocol compliance requirements"""
@@ -49,3 +50,26 @@ class TestProtocolCompliance:
         # Should require connection for operations
         with pytest.raises(RuntimeError):
             await binding.execute_request("/test", {})
+
+    @pytest.mark.asyncio
+    async def test_maybe_round_trip_payload(self):
+        """MAYBE must round-trip with persisted metadata."""
+        handler = ProtocolHandler("localhost", DEFAULT_POLYCALL_PORT)
+        message = await handler.send_consensus_echo(TrinaryDecision.MAYBE, correlation_id=42)
+
+        assert message["type"] == MessageTypes.CONSENSUS_ECHO
+        assert message["state"] == TrinaryDecision.MAYBE.value
+        assert message["persisted"] is True
+        assert handler.consensus_state == TrinaryDecision.MAYBE
+        assert handler.maybe_persisted is True
+
+    @pytest.mark.asyncio
+    async def test_consensus_acknowledgment_semantics(self):
+        """ACK must preserve persisted MAYBE semantics and correlation id."""
+        handler = ProtocolHandler("localhost", DEFAULT_POLYCALL_PORT)
+        ack = await handler.acknowledge_consensus(TrinaryDecision.MAYBE, correlation_id=99, persisted=True)
+
+        assert ack["type"] == MessageTypes.CONSENSUS_ACK
+        assert ack["correlation_id"] == 99
+        assert ack["state"] == TrinaryDecision.MAYBE.value
+        assert ack["persisted"] is True
