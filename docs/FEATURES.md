@@ -2,6 +2,26 @@
 
 ## Core Protocol Enhancements
 
+### Trinary Consensus Decisions (YES / NO / MAYBE)
+LibPolyCall now defines first-class trinary decision semantics in core headers and protocol payloads:
+- `YES` (`POLYCALL_TRINARY_YES`): explicit approval and intent to proceed.
+- `NO` (`POLYCALL_TRINARY_NO`): explicit rejection and intent to stop/deny.
+- `MAYBE` (`POLYCALL_TRINARY_MAYBE`): explicit defer/uncertain state awaiting later confirmation.
+
+Protocol support includes:
+- `POLYCALL_MSG_TRINARY_DECISION` (`0x07`) with decision identity, proposer identity, TTL, and trinary value.
+- `POLYCALL_MSG_TRINARY_ACK` (`0x08`) with echoed decision, responder identity, and acceptance result.
+
+Telemetry support includes decision lifecycle events:
+- `submitted` when a local decision is emitted.
+- `echoed` when a peer decision message is processed.
+- `confirmed` when an acknowledgment accepts the decision.
+- `expired` when acknowledgment denies/timeout semantics are reached.
+
+Bindings expose the lifecycle schema and wire examples via Java CLI:
+- `java -jar java-polycall.jar telemetry --decision-lifecycle-schema`
+- `java -jar java-polycall.jar telemetry --wire-example`
+
 ### Message Compression and Optimization
 The current protocol implementation can be enhanced with adaptive compression algorithms. This would involve implementing a dynamic compression system that selects the most efficient compression method based on message type and size. For large data transfers, this could significantly reduce bandwidth usage while maintaining performance for smaller messages.
 

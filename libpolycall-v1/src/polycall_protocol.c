@@ -19,6 +19,34 @@ typedef struct {
     char last_error[MAX_ERROR_LENGTH];  // Error buffer
 } protocol_context_internal_t;
 
+static uint64_t protocol_now_ms(void) {
+    struct timespec ts;
+    timespec_get(&ts, TIME_UTC);
+    return (uint64_t)ts.tv_sec * 1000ULL + (uint64_t)(ts.tv_nsec / 1000000ULL);
+}
+
+static void emit_decision_telemetry(
+    protocol_context_internal_t* internal_ctx,
+    uint32_t decision_id,
+    polycall_trinary_decision_t decision,
+    polycall_decision_event_t lifecycle_event,
+    uint8_t source_message_type,
+    uint32_t sequence
+) {
+    if (!internal_ctx || !internal_ctx->callbacks.on_decision_telemetry) return;
+
+    polycall_decision_telemetry_event_t event = {
+        .decision_id = decision_id,
+        .sequence = sequence,
+        .timestamp_ms = protocol_now_ms(),
+        .decision = decision,
+        .lifecycle_event = lifecycle_event,
+        .source_message_type = source_message_type
+    };
+
+    internal_ctx->callbacks.on_decision_telemetry(&internal_ctx->base, &event);
+}
+
 // Internal protocol error states
 // Protocol message validation helper
 static bool validate_message_header(const polycall_message_header_t* header) {
@@ -33,7 +61,7 @@ static bool validate_message_header(const polycall_message_header_t* header) {
     }
     
     // Validate message type
-    if (header->type < POLYCALL_MSG_HANDSHAKE || header->type > POLYCALL_MSG_HEARTBEAT) {
+    if (header->type < POLYCALL_MSG_HANDSHAKE || header->type > POLYCALL_MSG_TRINARY_ACK) {
         snprintf(protocol_error_buffer, MAX_ERROR_LENGTH,
                 "Invalid message type: %d", header->type);
         return false;
@@ -255,6 +283,56 @@ bool polycall_protocol_process(
         case POLYCALL_MSG_HEARTBEAT:
             // Process heartbeat
             break;
+
+        case POLYCALL_MSG_TRINARY_DECISION:
+            if (payload_length < sizeof(polycall_trinary_decision_message_t)) {
+                snprintf(protocol_error_buffer, MAX_ERROR_LENGTH, "Invalid trinary decision payload");
+                return false;
+            }
+            if (internal_ctx->callbacks.on_trinary_decision) {
+                internal_ctx->callbacks.on_trinary_decision(
+                    &internal_ctx->base,
+                    (const polycall_trinary_decision_message_t*)payload
+                );
+            }
+            {
+                const polycall_trinary_decision_message_t* decision_msg =
+                    (const polycall_trinary_decision_message_t*)payload;
+                emit_decision_telemetry(
+                    internal_ctx,
+                    decision_msg->decision_id,
+                    decision_msg->decision,
+                    POLYCALL_DECISION_EVENT_ECHOED,
+                    POLYCALL_MSG_TRINARY_DECISION,
+                    header->sequence
+                );
+            }
+            break;
+
+        case POLYCALL_MSG_TRINARY_ACK:
+            if (payload_length < sizeof(polycall_trinary_ack_message_t)) {
+                snprintf(protocol_error_buffer, MAX_ERROR_LENGTH, "Invalid trinary ack payload");
+                return false;
+            }
+            if (internal_ctx->callbacks.on_trinary_ack) {
+                internal_ctx->callbacks.on_trinary_ack(
+                    &internal_ctx->base,
+                    (const polycall_trinary_ack_message_t*)payload
+                );
+            }
+            {
+                const polycall_trinary_ack_message_t* ack_msg =
+                    (const polycall_trinary_ack_message_t*)payload;
+                emit_decision_telemetry(
+                    internal_ctx,
+                    ack_msg->decision_id,
+                    ack_msg->echoed_decision,
+                    ack_msg->accepted ? POLYCALL_DECISION_EVENT_CONFIRMED : POLYCALL_DECISION_EVENT_EXPIRED,
+                    POLYCALL_MSG_TRINARY_ACK,
+                    header->sequence
+                );
+            }
+            break;
             
         default:
             return false;
@@ -382,6 +460,62 @@ bool polycall_protocol_authenticate(
     return transition_protocol_state(internal_ctx, POLYCALL_STATE_READY);
 }
 
+bool polycall_protocol_send_trinary_decision(
+    polycall_protocol_context_t* ctx,
+    const polycall_trinary_decision_message_t* decision
+) {
+    if (!ctx || !decision) return false;
+    protocol_context_internal_t* internal_ctx = (protocol_context_internal_t*)ctx;
+    uint32_t sequence = ctx->next_sequence;
+
+    if (!polycall_protocol_send(
+            ctx,
+            POLYCALL_MSG_TRINARY_DECISION,
+            decision,
+            sizeof(*decision),
+            POLYCALL_FLAG_RELIABLE | POLYCALL_FLAG_URGENT)) {
+        return false;
+    }
+
+    emit_decision_telemetry(
+        internal_ctx,
+        decision->decision_id,
+        decision->decision,
+        POLYCALL_DECISION_EVENT_SUBMITTED,
+        POLYCALL_MSG_TRINARY_DECISION,
+        sequence
+    );
+    return true;
+}
+
+bool polycall_protocol_send_trinary_ack(
+    polycall_protocol_context_t* ctx,
+    const polycall_trinary_ack_message_t* ack
+) {
+    if (!ctx || !ack) return false;
+    protocol_context_internal_t* internal_ctx = (protocol_context_internal_t*)ctx;
+    uint32_t sequence = ctx->next_sequence;
+
+    if (!polycall_protocol_send(
+            ctx,
+            POLYCALL_MSG_TRINARY_ACK,
+            ack,
+            sizeof(*ack),
+            POLYCALL_FLAG_RELIABLE)) {
+        return false;
+    }
+
+    emit_decision_telemetry(
+        internal_ctx,
+        ack->decision_id,
+        ack->echoed_decision,
+        ack->accepted ? POLYCALL_DECISION_EVENT_CONFIRMED : POLYCALL_DECISION_EVENT_EXPIRED,
+        POLYCALL_MSG_TRINARY_ACK,
+        sequence
+    );
+    return true;
+}
+
 
 
 
@@ -390,6 +524,11 @@ void polycall_protocol_set_error(polycall_protocol_context_t* ctx, const char* e
     protocol_context_internal_t* internal_ctx = (protocol_context_internal_t*)ctx;
     snprintf(internal_ctx->last_error, MAX_ERROR_LENGTH, "%s", error);
     transition_protocol_state(internal_ctx, POLYCALL_STATE_ERROR);
+}
+
+const char* polycall_protocol_get_error(const polycall_protocol_context_t* ctx) {
+    if (!ctx) return protocol_error_buffer;
+    return ((const protocol_context_internal_t*)ctx)->last_error;
 }
 
 // Protocol utility functions

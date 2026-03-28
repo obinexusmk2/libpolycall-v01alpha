@@ -91,6 +91,16 @@ typedef struct PolyCall_StateDiagnostics {
     uint32_t current_checksum;
 } PolyCall_StateDiagnostics;
 
+// Trinary decision states used by consensus-driven workflows.
+// YES   => explicitly approved.
+// NO    => explicitly rejected.
+// MAYBE => deferred/undecided; caller should await later confirmation.
+typedef enum {
+    POLYCALL_TRINARY_NO = 0,
+    POLYCALL_TRINARY_MAYBE = 1,
+    POLYCALL_TRINARY_YES = 2
+} polycall_trinary_decision_t;
+
 // API functions
 polycall_sm_status_t polycall_sm_create_with_integrity(
     polycall_context_t ctx, 
