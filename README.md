@@ -1,3 +1,14 @@
+# Documentation Index
+
+Start here for the current repository layout and runtime usage:
+
+- [`docs/PLAN.md`](docs/PLAN.md) (documentation start page/index)
+- [`docs/USAGE.md`](docs/USAGE.md) (prerequisites, build/run, config, binding entry points)
+- [`docs/TRAVERSAL.md`](docs/TRAVERSAL.md) (runtime/bindings/projects file map)
+- [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md) (directory architecture)
+
+---
+
 # The Future is Now: LibPolyCall Vision Statement
 
 **From the Desk of Nnamdi Michael Okpala, Founder - OBINexusComputing**
@@ -32,7 +43,7 @@ Traditional systems are blind. They process requests without understanding conte
 
 LibPolyCall sees everything:
 - **Silent protocol observation** captures every interaction
-- **Real-time analytics** reveal patterns others miss  
+- **Real-time analytics** reveal patterns others miss
 - **State machine mapping** creates complete user journey intelligence
 - **Bug replication** makes impossible problems possible to solve
 
@@ -42,7 +53,7 @@ LibPolyCall sees everything:
 
 Because the enterprise world is drowning in complexity:
 - Legacy COBOL systems that can't retire
-- Microservices that don't actually communicate  
+- Microservices that don't actually communicate
 - APIs that exist in silos
 - Development teams speaking different technical languages
 
@@ -54,7 +65,7 @@ Every hour your team spends building language-specific APIs is an hour not spent
 
 LibPolyCall eliminates this waste through **polymorphic core architecture**:
 - **One API definition** → Multiple language implementations
-- **Unified debugging** → Faster problem resolution  
+- **Unified debugging** → Faster problem resolution
 - **Centralized telemetry** → Intelligent scaling decisions
 - **Program-first design** → Technology-agnostic solutions
 
@@ -62,12 +73,12 @@ LibPolyCall eliminates this waste through **polymorphic core architecture**:
 
 Imagine deploying a single API specification that instantly works across Python, Node.js, Java, Go, and languages not yet invented. Imagine debugging production issues with perfect state reproduction. Imagine microservices that communicate as naturally as neurons in a brain.
 
-**This isn't imagination—this is LibPolyCall v1trial.**
+**This isn't imagination—this is LibPolyCall `libpolycall-v1` (historically called “v1trial” in older docs).**
 
 ## For the Technical Visionaries
 
 LibPolyCall represents years of research into:
-- **Polymorphic protocol design**  
+- **Polymorphic protocol design**
 - **Cross-language FFI optimization**
 - **Zero-trust security architecture**
 - **Advanced telemetry systems**
@@ -87,13 +98,13 @@ The debugging nightmare of distributed systems is over—if you implement intell
 
 ---
 
-**LibPolyCall v1trial**: Where program-first architecture meets zero-trust security meets intelligent telemetry.
+**LibPolyCall `libpolycall-v1`**: Where program-first architecture meets zero-trust security meets intelligent telemetry.
 
-**Repository**: `obinexus/libpolycall-v1trial`  
+**Repository**: `obinexus/libpolycall-v01alpha`
 **The future is now. The choice is yours.**
 
-*Nnamdi Michael Okpala*  
-*Founder & Chief Architect*  
+*Nnamdi Michael Okpala*
+*Founder & Chief Architect*
 *OBINexusComputing*
 
 ---

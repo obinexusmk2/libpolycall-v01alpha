@@ -1,5 +1,16 @@
 # PolyCall Implementation Plan
 
+## Documentation Navigation
+
+Use this file as an index page:
+
+- [`../README.md`](../README.md) – repository landing page
+- [`USAGE.md`](USAGE.md) – linear setup/build/run/config guide for `libpolycall-v1`
+- [`TRAVERSAL.md`](TRAVERSAL.md) – runtime, bindings, and projects traversal map
+- [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md) – current directory architecture
+
+---
+
 ## Phase 1: Core Foundation (Week 1-2)
 
 ### polycall.c Implementation
