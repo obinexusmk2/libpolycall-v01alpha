@@ -67,10 +67,13 @@ debug: all
 release: CFLAGS += $(RELEASE_FLAGS)
 release: all
 
+# static output: build/lib/libpolycall.a
 static: dirs $(STATIC_LIB)
 
+# shared output: build/lib/libpolycall.$(SHARED_EXT)
 shared: dirs $(SHARED_LIB)
 
+# bin output: build/bin/polycall$(EXE_EXT)
 bin: dirs $(EXECUTABLE)
 
 dirs:
@@ -93,10 +96,6 @@ $(SHARED_LIB): $(OBJS)
 
 $(EXECUTABLE): $(MAIN_OBJ) $(STATIC_LIB)
 	$(CC) -o $@ $(MAIN_OBJ) $(STATIC_LIB) $(LDFLAGS) $(LDLIBS) $(PLATFORM_LIBS)
-	$(CC) $(SHARED_FLAG) -o $@ $^ $(LDFLAGS) $(LDLIBS)
-
-$(EXECUTABLE): $(MAIN_OBJ) $(STATIC_LIB)
-	$(CC) -o $@ $(MAIN_OBJ) $(STATIC_LIB) $(LDFLAGS) $(LDLIBS)
 
 clean:
 	@$(call RM_RF,$(BUILD_DIR))
