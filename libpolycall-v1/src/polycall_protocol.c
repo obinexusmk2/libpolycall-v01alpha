@@ -392,6 +392,47 @@ void polycall_protocol_set_error(polycall_protocol_context_t* ctx, const char* e
     transition_protocol_state(internal_ctx, POLYCALL_STATE_ERROR);
 }
 
+
+
+bool polycall_protocol_encode_decision(
+    polycall_decision_t decision,
+    uint8_t* buffer,
+    size_t buffer_size,
+    size_t* encoded_length
+) {
+    if (!buffer || buffer_size < 1 || !encoded_length) {
+        return false;
+    }
+
+    if (decision != POLYCALL_DECISION_NO &&
+        decision != POLYCALL_DECISION_YES &&
+        decision != POLYCALL_DECISION_MAYBE) {
+        return false;
+    }
+
+    buffer[0] = (uint8_t)decision;
+    *encoded_length = 1;
+    return true;
+}
+
+bool polycall_protocol_decode_decision(
+    const void* payload,
+    size_t payload_length,
+    polycall_decision_t* decision
+) {
+    if (!payload || payload_length != 1 || !decision) {
+        return false;
+    }
+
+    uint8_t raw = ((const uint8_t*)payload)[0];
+    if (raw > (uint8_t)POLYCALL_DECISION_MAYBE) {
+        return false;
+    }
+
+    *decision = (polycall_decision_t)raw;
+    return true;
+}
+
 // Protocol utility functions
 uint32_t polycall_protocol_calculate_checksum(
     const void* data,

@@ -139,6 +139,10 @@ polycall_sm_status_t polycall_sm_create_with_integrity(
     (*sm)->integrity_check = integrity_check;
     (*sm)->diagnostics.last_verification = (uint64_t)time(NULL);
     (*sm)->machine_checksum = 0;
+    (*sm)->allow_forced_binary_collapse = false;
+    for (size_t i = 0; i < POLYCALL_MAX_STATES; i++) {
+        (*sm)->state_decisions[i] = POLYCALL_DECISION_MAYBE;
+    }
     
     return POLYCALL_SM_SUCCESS;
 }
@@ -222,6 +226,7 @@ polycall_sm_status_t polycall_sm_add_state(
 
     update_state_timestamp(state);
     state->checksum = calculate_state_checksum(state);
+    sm->state_decisions[state->id] = POLYCALL_DECISION_MAYBE;
     
     sm->num_states++;
     return POLYCALL_SM_SUCCESS;
@@ -449,6 +454,94 @@ polycall_sm_status_t polycall_sm_get_state_diagnostics(
     diagnostics->current_checksum = state->checksum;
     diagnostics->transition_count = 0;  /* Updated in future implementation */
     diagnostics->integrity_check_count = 0;  /* Updated in future implementation */
+
+    return POLYCALL_SM_SUCCESS;
+}
+
+polycall_sm_status_t polycall_sm_set_state_decision(
+    PolyCall_StateMachine* sm,
+    unsigned int state_id,
+    polycall_decision_t decision
+) {
+    if (!sm || !sm->is_initialized) {
+        return POLYCALL_SM_ERROR_NOT_INITIALIZED;
+    }
+    if (state_id >= sm->num_states) {
+        return POLYCALL_SM_ERROR_INVALID_STATE;
+    }
+    if (decision != POLYCALL_DECISION_NO &&
+        decision != POLYCALL_DECISION_YES &&
+        decision != POLYCALL_DECISION_MAYBE) {
+        return POLYCALL_SM_ERROR_INVALID_TRANSITION;
+    }
+
+    sm->state_decisions[state_id] = decision;
+    return POLYCALL_SM_SUCCESS;
+}
+
+polycall_sm_status_t polycall_sm_get_state_decision(
+    const PolyCall_StateMachine* sm,
+    unsigned int state_id,
+    polycall_decision_t* decision
+) {
+    if (!sm || !sm->is_initialized || !decision) {
+        return POLYCALL_SM_ERROR_NOT_INITIALIZED;
+    }
+    if (state_id >= sm->num_states) {
+        return POLYCALL_SM_ERROR_INVALID_STATE;
+    }
+
+    *decision = sm->state_decisions[state_id];
+    return POLYCALL_SM_SUCCESS;
+}
+
+polycall_sm_status_t polycall_sm_state_is_unresolved(
+    const PolyCall_StateMachine* sm,
+    unsigned int state_id,
+    bool* is_unresolved
+) {
+    if (!sm || !sm->is_initialized || !is_unresolved) {
+        return POLYCALL_SM_ERROR_NOT_INITIALIZED;
+    }
+    if (state_id >= sm->num_states) {
+        return POLYCALL_SM_ERROR_INVALID_STATE;
+    }
+
+    *is_unresolved = (sm->state_decisions[state_id] == POLYCALL_DECISION_MAYBE);
+    return POLYCALL_SM_SUCCESS;
+}
+
+polycall_sm_status_t polycall_sm_set_binary_collapse_policy(
+    PolyCall_StateMachine* sm,
+    bool allow
+) {
+    if (!sm || !sm->is_initialized) {
+        return POLYCALL_SM_ERROR_NOT_INITIALIZED;
+    }
+
+    sm->allow_forced_binary_collapse = allow;
+    return POLYCALL_SM_SUCCESS;
+}
+
+polycall_sm_status_t polycall_sm_force_binary_collapse(
+    PolyCall_StateMachine* sm,
+    polycall_decision_t collapse_to
+) {
+    if (!sm || !sm->is_initialized) {
+        return POLYCALL_SM_ERROR_NOT_INITIALIZED;
+    }
+    if (collapse_to != POLYCALL_DECISION_NO && collapse_to != POLYCALL_DECISION_YES) {
+        return POLYCALL_SM_ERROR_INVALID_TRANSITION;
+    }
+    if (!sm->allow_forced_binary_collapse) {
+        return POLYCALL_SM_ERROR_INVALID_TRANSITION;
+    }
+
+    for (unsigned int i = 0; i < sm->num_states; i++) {
+        if (sm->state_decisions[i] == POLYCALL_DECISION_MAYBE) {
+            sm->state_decisions[i] = collapse_to;
+        }
+    }
 
     return POLYCALL_SM_SUCCESS;
 }

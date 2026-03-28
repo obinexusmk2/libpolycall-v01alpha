@@ -4,6 +4,7 @@
 #include "polycall.h"
 #include "polycall_state_machine.h"
 #include "network.h"
+#include "polycall_decision.h"
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -117,6 +118,21 @@ polycall_protocol_state_t polycall_protocol_get_state(
 bool polycall_protocol_can_transition(
     const polycall_protocol_context_t* ctx,
     polycall_protocol_state_t target_state
+);
+
+
+// Trinary decision payload codec
+bool polycall_protocol_encode_decision(
+    polycall_decision_t decision,
+    uint8_t* buffer,
+    size_t buffer_size,
+    size_t* encoded_length
+);
+
+bool polycall_protocol_decode_decision(
+    const void* payload,
+    size_t payload_length,
+    polycall_decision_t* decision
 );
 
 // Protocol handshake helpers

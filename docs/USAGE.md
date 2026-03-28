@@ -158,3 +158,31 @@ echo "port=3004:8084" > /opt/polycall/services/newlang/.polycallrc
 3. Restart the PolyCall service to apply the new configuration.
 
 This setup allows PolyCall to act as a central coordinator for all your language bindings while maintaining clean separation between services.
+## Trinary decision wire payloads
+
+`libpolycall-v1` now supports a trinary decision value at the protocol payload layer.
+
+### Public enum
+
+Use `polycall_decision_t` from `libpolycall-v1/include/polycall_decision.h`:
+
+- `POLYCALL_DECISION_NO` (`0`)
+- `POLYCALL_DECISION_YES` (`1`)
+- `POLYCALL_DECISION_MAYBE` (`2`)
+
+### Wire format
+
+Decision payloads are encoded as exactly **1 byte**:
+
+- `0x00` = `NO`
+- `0x01` = `YES`
+- `0x02` = `MAYBE`
+
+Values outside this set are rejected by the decoder.
+
+### API helpers
+
+- `polycall_protocol_encode_decision(...)` encodes a single trinary value.
+- `polycall_protocol_decode_decision(...)` validates and decodes a single-byte payload.
+
+Behavioral guarantee: encoding then decoding any legal trinary value preserves the exact decision, including unresolved `MAYBE`.
