@@ -1,0 +1,20 @@
+{
+  "version": "1.0",
+  "description": "Canonical retry expectations for human review loops.",
+  "scenarios": [
+    {
+      "id": "retry_until_yes",
+      "max_retries": 3,
+      "attempts": ["MAYBE", "MAYBE", "YES"],
+      "expected_final": "YES",
+      "expected_retry_count": 2
+    },
+    {
+      "id": "retry_exhausted_to_no",
+      "max_retries": 2,
+      "attempts": ["MAYBE", "MAYBE", "MAYBE"],
+      "expected_final": "NO",
+      "expected_retry_count": 2
+    }
+  ]
+}
