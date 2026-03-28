@@ -1,0 +1,17 @@
+schema_version: "1.0"
+scenario_id: consensus.deferred_maybe
+domain: consensus
+decision: MAYBE
+status: deferred
+includes:
+  - decision_maybe.yaml
+  - retry_policy.yaml
+input:
+  proposal_id: proposal-gamma
+  quorum: 3
+expected:
+  approval_count: 0
+  rejection_count: 0
+  timeout_ms: 45000
+  retry_count: 2
+  ack_required: true

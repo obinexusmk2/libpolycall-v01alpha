@@ -1,0 +1,3 @@
+behavior: ack_on_first_emit
+ack_received: true
+retry_count: 0
