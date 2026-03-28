@@ -1,0 +1,49 @@
+{
+  "binding_entry_points": {
+    "go": [
+      "bindings/go-polycall/go.mod"
+    ],
+    "java": [
+      "bindings/java-polycall/pom.xml"
+    ],
+    "lua": [
+      "bindings/lua-polycall/lua-polycall-1.0-1.rockspec",
+      "bindings/lua-polycall/polycall/init.lua"
+    ],
+    "node": [
+      "bindings/node-polycall/package.json",
+      "bindings/node-polycall/src/index.js"
+    ],
+    "python": [
+      "bindings/pypolycall/pypolycall/__init__.py",
+      "bindings/pypolycall/setup.py"
+    ]
+  },
+  "core_modules": [
+    "libpolycall-v1/src/network.c",
+    "libpolycall-v1/src/polycall.c",
+    "libpolycall-v1/src/polycall_micro.c",
+    "libpolycall-v1/src/polycall_parser.c",
+    "libpolycall-v1/src/polycall_protocol.c",
+    "libpolycall-v1/src/polycall_state_machine.c",
+    "libpolycall-v1/src/polycall_token.c",
+    "libpolycall-v1/src/polycall_tokenizer.c"
+  ],
+  "counts": {
+    "binding_entry_points": 8,
+    "core_modules": 8,
+    "headers": 9
+  },
+  "headers": [
+    "libpolycall-v1/include/network.h",
+    "libpolycall-v1/include/polycall.h",
+    "libpolycall-v1/include/polycall_file_parser.h",
+    "libpolycall-v1/include/polycall_micro.h",
+    "libpolycall-v1/include/polycall_parser.h",
+    "libpolycall-v1/include/polycall_protocol.h",
+    "libpolycall-v1/include/polycall_state_machine.h",
+    "libpolycall-v1/include/polycall_token.h",
+    "libpolycall-v1/include/polycall_tokenizer.h"
+  ],
+  "repo_root": "libpolycall-v01alpha"
+}
