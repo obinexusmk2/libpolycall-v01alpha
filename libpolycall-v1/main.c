@@ -3,6 +3,7 @@
 #include "polycall_state_machine.h"
 #include "polycall_tokenizer.h"
 #include "network.h"
+#include "daemon.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,6 +13,8 @@
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#else
+#include <unistd.h>
 #endif
 
 #define PPI_VERSION "1.0.0"
@@ -54,6 +57,9 @@ typedef struct {
     bool has_snapshot[POLYCALL_MAX_STATES];
     PortMappingArray port_mappings;
     bool interactive_mode;
+    bool daemon_mode;
+    const char* pid_file;
+    const char* log_file;
 #ifdef _WIN32
     bool wsaInitialized;
 #endif
@@ -62,6 +68,7 @@ typedef struct {
 
 // Global runtime instance
 static PPI_Runtime g_runtime = {0};
+static volatile sig_atomic_t g_shutdown_requested = 0;
 
 // Forward declarations of command handlers
 static bool cmd_init(const PPI_Runtime* runtime, const char* arg1, const char* arg2, const char* arg3);
@@ -692,40 +699,107 @@ static void cleanup_runtime(void) {
         g_runtime.wsaInitialized = false;
     }
 #endif
+
+    polycall_pidfile_release();
 }
 
 
 // Adding signal handler registration
-static void cleanup_and_exit(void) {
-    cleanup_runtime();
-    printf("Goodbye!\n");
-    exit(0);
-}
-
 static void signal_handler(int signum) {
     (void)signum;
-    cleanup_and_exit();
+    g_shutdown_requested = 1;
+    g_runtime.running = false;
 }
+
 static void register_signal_handlers(void) {
+#ifdef _WIN32
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
+#else
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = signal_handler;
+    sigemptyset(&sa.sa_mask);
+    sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
+#endif
+}
+
+static void print_usage(const char* program_name) {
+    printf("Usage: %s [-f CONFIG] [--detach] [--pid-file PATH] [--log-file PATH]\n", program_name);
+    printf("  -f CONFIG         Run in non-interactive mode using CONFIG\n");
+    printf("  --detach          Enable daemon mode (double-fork, setsid, stdio redirect)\n");
+    printf("  --pid-file PATH   Create and lock daemon PID file at PATH\n");
+    printf("  --log-file PATH   Redirect daemon stdout/stderr to PATH\n");
 }
 
 
 int main(int argc, char* argv[]) {
     bool non_interactive = false;
     const char* config_file = NULL;
+    const char* pid_file = NULL;
+    const char* log_file = NULL;
+    bool detach_mode = false;
     
     // Parse command line arguments
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-f") == 0 && i + 1 < argc) {
             config_file = argv[++i];
             non_interactive = true;
+        } else if (strcmp(argv[i], "--detach") == 0) {
+            detach_mode = true;
+        } else if (strcmp(argv[i], "--pid-file") == 0 && i + 1 < argc) {
+            pid_file = argv[++i];
+        } else if (strcmp(argv[i], "--log-file") == 0 && i + 1 < argc) {
+            log_file = argv[++i];
+        } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
+            print_usage(argv[0]);
+            return 0;
+        } else {
+            fprintf(stderr, "Unknown or incomplete option: %s\n", argv[i]);
+            print_usage(argv[0]);
+            return 1;
         }
     }
 
+    if (detach_mode && !non_interactive) {
+        fprintf(stderr, "Daemon mode requires -f CONFIG for non-interactive operation\n");
+        return 1;
+    }
+
+#ifdef _WIN32
+    if (detach_mode || pid_file != NULL) {
+        fprintf(stderr, "Daemon mode and PID files are not supported on Windows\n");
+        return 1;
+    }
+#endif
+
+    if (detach_mode) {
+        polycall_daemon_options_t daemon_options = {
+            .umask_value = 027,
+            .working_directory = "/",
+            .log_file = log_file
+        };
+        if (!polycall_daemonize(&daemon_options)) {
+            fprintf(stderr, "Failed to detach into daemon mode\n");
+            return 1;
+        }
+    }
+
+    if (pid_file != NULL) {
+        if (!polycall_pidfile_acquire(pid_file)) {
+            fprintf(stderr, "Failed to lock pid file '%s': %s\n", pid_file, strerror(errno));
+            return 1;
+        }
+    }
+
+    g_runtime.daemon_mode = detach_mode;
+    g_runtime.pid_file = pid_file;
+    g_runtime.log_file = log_file;
+
     if (!initialize_runtime()) {
         fprintf(stderr, "Failed to initialize runtime\n");
+        polycall_pidfile_release();
         return 1;
     }
 
@@ -799,7 +873,7 @@ int main(int argc, char* argv[]) {
         printf("Running in non-interactive mode...\n");
         g_runtime.running = true;
 
-        while (g_runtime.running) {
+        while (g_runtime.running && !g_shutdown_requested) {
             // Process all network programs
             for (size_t i = 0; i < g_runtime.program_count; i++) {
                 NetworkProgram* program = g_runtime.programs[i];
@@ -817,7 +891,7 @@ int main(int argc, char* argv[]) {
         char input[MAX_INPUT];
         printf("PolyCall CLI v%s - Type 'help' for commands\n", PPI_VERSION);
 
-        while (g_runtime.running) {
+        while (g_runtime.running && !g_shutdown_requested) {
             printf("\n> ");
             if (!fgets(input, sizeof(input), stdin)) {
                 break;
