@@ -50,3 +50,27 @@ libpolycall-trial/
 - **Security**: Zero-trust principles consistently applied across all layers
 
 Generated: 2025-06-01T04:11:53.099960
+
+## Daemon Lifecycle (libpolycall-v1 CLI)
+
+The `libpolycall-v1` binary now supports foreground and daemonized operation:
+
+1. **Foreground startup (default)**:
+   - Process remains attached to terminal.
+   - Interactive mode (`stdin`) and non-interactive mode (`-f <config>`) both work as before.
+
+2. **Daemon startup (`--detach`)**:
+   - Uses a **double-fork** pattern.
+   - Creates a new session via `setsid()`.
+   - Redirects `stdin`, `stdout`, and `stderr` to `/dev/null`.
+   - Optionally writes a PID file (`--pid-file <path>`).
+   - Parent process exits only after child readiness is signaled through an internal pipe.
+
+3. **Shutdown/cleanup behavior**:
+   - `SIGINT` and `SIGTERM` set runtime shutdown flags.
+   - Main event loops exit naturally, then centralized cleanup runs:
+     - network program teardown
+     - state machine/context cleanup
+     - PID file removal (when daemon mode + PID file is active)
+
+This model keeps startup deterministic while preserving signal-driven resource cleanup.

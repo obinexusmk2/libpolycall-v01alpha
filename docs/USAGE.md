@@ -158,3 +158,33 @@ echo "port=3004:8084" > /opt/polycall/services/newlang/.polycallrc
 3. Restart the PolyCall service to apply the new configuration.
 
 This setup allows PolyCall to act as a central coordinator for all your language bindings while maintaining clean separation between services.
+
+## Daemon mode
+
+`libpolycall-v1` supports background daemonization for non-interactive deployments.
+
+### Start in foreground (default)
+
+```bash
+./build/bin/polycall -f config.Polycallfile
+```
+
+### Start detached daemon
+
+```bash
+./build/bin/polycall --detach -f config.Polycallfile
+```
+
+### Start detached daemon with PID file
+
+```bash
+./build/bin/polycall --detach --pid-file /var/run/polycall.pid -f config.Polycallfile
+```
+
+### Operational notes
+
+- `--detach` triggers double-fork daemonization and `setsid()`.
+- Standard I/O streams are redirected to `/dev/null` in daemon mode.
+- Parent exits only after child readiness is confirmed.
+- `SIGINT`/`SIGTERM` initiate graceful shutdown and runtime cleanup.
+- If `--pid-file` is used, the PID file is removed during normal cleanup.

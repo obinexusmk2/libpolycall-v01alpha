@@ -3,11 +3,15 @@
 #include "polycall_state_machine.h"
 #include "polycall_tokenizer.h"
 #include "network.h"
+#include "daemon.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
 #include <pthread.h>
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -62,6 +66,7 @@ typedef struct {
 
 // Global runtime instance
 static PPI_Runtime g_runtime = {0};
+static volatile sig_atomic_t g_shutdown_requested = 0;
 
 // Forward declarations of command handlers
 static bool cmd_init(const PPI_Runtime* runtime, const char* arg1, const char* arg2, const char* arg3);
@@ -692,19 +697,14 @@ static void cleanup_runtime(void) {
         g_runtime.wsaInitialized = false;
     }
 #endif
+    polycall_daemon_cleanup();
 }
 
-
-// Adding signal handler registration
-static void cleanup_and_exit(void) {
-    cleanup_runtime();
-    printf("Goodbye!\n");
-    exit(0);
-}
 
 static void signal_handler(int signum) {
     (void)signum;
-    cleanup_and_exit();
+    g_shutdown_requested = 1;
+    g_runtime.running = false;
 }
 static void register_signal_handlers(void) {
     signal(SIGINT, signal_handler);
@@ -715,17 +715,42 @@ static void register_signal_handlers(void) {
 int main(int argc, char* argv[]) {
     bool non_interactive = false;
     const char* config_file = NULL;
+    bool detach_mode = false;
+    const char* pid_file = NULL;
     
     // Parse command line arguments
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-f") == 0 && i + 1 < argc) {
             config_file = argv[++i];
             non_interactive = true;
+        } else if (strcmp(argv[i], "--detach") == 0) {
+            detach_mode = true;
+        } else if (strcmp(argv[i], "--pid-file") == 0 && i + 1 < argc) {
+            pid_file = argv[++i];
+        } else if (strcmp(argv[i], "--pid-file") == 0) {
+            fprintf(stderr, "--pid-file requires a path argument\n");
+            return 1;
+        }
+    }
+
+    if (detach_mode) {
+        polycall_daemon_result_t daemon_result = polycall_daemonize(pid_file);
+        if (daemon_result == POLYCALL_DAEMON_PARENT_EXIT) {
+            return 0;
+        }
+        if (daemon_result == POLYCALL_DAEMON_UNSUPPORTED) {
+            fprintf(stderr, "Daemon mode is not supported on this platform\n");
+            return 1;
+        }
+        if (daemon_result != POLYCALL_DAEMON_OK_CHILD) {
+            fprintf(stderr, "Failed to detach process as daemon\n");
+            return 1;
         }
     }
 
     if (!initialize_runtime()) {
         fprintf(stderr, "Failed to initialize runtime\n");
+        polycall_daemon_cleanup();
         return 1;
     }
 
@@ -810,7 +835,9 @@ int main(int argc, char* argv[]) {
                 }
             }
             // Small sleep to prevent CPU spin
+#ifndef _WIN32
             usleep(1000); // 1ms sleep
+#endif
         }
     } else {
         // Original interactive mode
@@ -889,6 +916,11 @@ int main(int argc, char* argv[]) {
     }
 
     cleanup_runtime();
-    printf("Goodbye!\n");
+    if (!detach_mode) {
+        if (g_shutdown_requested) {
+            printf("Shutdown requested. ");
+        }
+        printf("Goodbye!\n");
+    }
     return 0;
 }
