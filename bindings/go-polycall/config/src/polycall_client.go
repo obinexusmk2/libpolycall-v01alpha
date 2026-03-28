@@ -42,7 +42,23 @@ const (
 	MessageResponse  MessageType = 0x04
 	MessageError     MessageType = 0x05
 	MessageHeartbeat MessageType = 0x06
+	MessageConsensusEcho MessageType = 0x07
+	MessageConsensusAck  MessageType = 0x08
 )
+
+type TrinaryDecision uint8
+
+const (
+	DecisionNo    TrinaryDecision = 0x00
+	DecisionMaybe TrinaryDecision = 0x01
+	DecisionYes   TrinaryDecision = 0x02
+)
+
+type ConsensusPayload struct {
+	Decision      TrinaryDecision `json:"decision"`
+	CorrelationID uint32          `json:"correlation_id"`
+	Persisted     bool            `json:"persisted"`
+}
 
 // Protocol flags for message processing
 type ProtocolFlag uint16
@@ -243,6 +259,25 @@ func (c *PolyCallClient) SendCommand(command string, data interface{}) ([]byte, 
 	}
 
 	return c.sendMessage(MessageCommand, payloadBytes, FlagReliable)
+}
+
+func (c *PolyCallClient) SendConsensusEcho(decision TrinaryDecision, correlationID uint32) ([]byte, error) {
+	if decision > DecisionYes {
+		return nil, fmt.Errorf("invalid trinary decision: %d", decision)
+	}
+
+	payload := ConsensusPayload{
+		Decision:      decision,
+		CorrelationID: correlationID,
+		Persisted:     decision == DecisionMaybe,
+	}
+
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal consensus echo payload: %w", err)
+	}
+
+	return c.sendMessage(MessageConsensusEcho, payloadBytes, FlagReliable)
 }
 
 // GetStates retrieves all states from LibPolyCall server

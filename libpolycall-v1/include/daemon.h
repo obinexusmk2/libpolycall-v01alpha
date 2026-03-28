@@ -1,19 +1,22 @@
 #ifndef POLYCALL_DAEMON_H
 #define POLYCALL_DAEMON_H
 
+#include <stdbool.h>
+#include <sys/types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef enum {
-    POLYCALL_DAEMON_OK_CHILD = 0,
-    POLYCALL_DAEMON_PARENT_EXIT = 1,
-    POLYCALL_DAEMON_ERROR = -1,
-    POLYCALL_DAEMON_UNSUPPORTED = -2
-} polycall_daemon_result_t;
+typedef struct {
+    mode_t umask_value;
+    const char* working_directory;
+    const char* log_file;
+} polycall_daemon_options_t;
 
-polycall_daemon_result_t polycall_daemonize(const char* pid_file_path);
-void polycall_daemon_cleanup(void);
+bool polycall_daemonize(const polycall_daemon_options_t* options);
+bool polycall_pidfile_acquire(const char* pid_file);
+void polycall_pidfile_release(void);
 
 #ifdef __cplusplus
 }
