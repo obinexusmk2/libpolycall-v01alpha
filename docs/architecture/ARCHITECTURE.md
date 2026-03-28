@@ -50,3 +50,18 @@ libpolycall-trial/
 - **Security**: Zero-trust principles consistently applied across all layers
 
 Generated: 2025-06-01T04:11:53.099960
+
+## Adapter Contract: telemetry.consensus
+
+Runtime interface layers (bindings/adapters) must preserve trinary consensus semantics end-to-end.
+
+- Contract event type: `telemetry.consensus`
+- Contract state enum: `YES`, `NO`, `MAYBE`
+- `MAYBE` is valid and must not be transformed into error/unknown.
+- Required transport fields: `ack_status`, `persisted`, `storage_key`, `session_id`, `timestamp`.
+
+Cross-binding command contract:
+
+```bash
+telemetry consensus --state yes|no|maybe --session <id>
+```
