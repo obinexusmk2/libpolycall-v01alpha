@@ -132,6 +132,7 @@ static const Command COMMANDS[] = {
     {"init", (CommandHandler)cmd_init, "Initialize the state machine", "init"},
     {"add_state", (CommandHandler)cmd_add_state, "Add a new state", "add_state NAME"},
     {"help", (CommandHandler)cmd_help, "Show help", "help"},
+    {"telemetry", (CommandHandler)cmd_telemetry, "Telemetry controls", "telemetry status|stream|export <path>"},
     {"quit", (CommandHandler)cmd_quit, "Exit program", "quit"},
 };
 
@@ -141,6 +142,7 @@ static bool cmd_init(const PPI_Runtime* runtime, const char* arg1, const char* a
 static bool cmd_add_state(const PPI_Runtime* runtime, const char* name, const char* arg2, const char* arg3);
 static bool cmd_help(const PPI_Runtime* runtime, const char* arg1, const char* arg2, const char* arg3);
 static bool cmd_quit(const PPI_Runtime* runtime, const char* arg1, const char* arg2, const char* arg3);
+static bool cmd_telemetry(const PPI_Runtime* runtime, const char* subcommand, const char* arg2, const char* arg3);
 
 static void on_network_connect(NetworkEndpoint* endpoint) {
     if (endpoint) {
@@ -901,6 +903,7 @@ static void cleanup_runtime(void) {
         polycall_cleanup(g_runtime.pc_ctx);
         g_runtime.pc_ctx = NULL;
     }
+    polycall_telemetry_shutdown();
 
 #ifdef _WIN32
     if (g_runtime.wsaInitialized) {
@@ -1093,6 +1096,8 @@ int main(int argc, char* argv[]) {
 
             char *command = strtok(input, " ");
             char *arg1 = strtok(NULL, " ");
+            char *arg2 = strtok(NULL, " ");
+            char *arg3 = strtok(NULL, " ");
             add_to_history(input);
 
             if (strcmp(command, "start_network") == 0) {
@@ -1146,6 +1151,10 @@ int main(int argc, char* argv[]) {
                     printf("State '%s' added successfully\n", arg1);
                 } else {
                     printf("Failed to add state '%s'\n", arg1);
+                }
+            } else if (strcmp(command, "telemetry") == 0) {
+                if (!cmd_telemetry(&g_runtime, arg1, arg2, arg3)) {
+                    printf("Usage: telemetry status|stream|export <path>\n");
                 }
             } else {
                 process_command(&g_runtime, input);
