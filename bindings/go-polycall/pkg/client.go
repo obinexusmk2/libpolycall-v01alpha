@@ -38,7 +38,17 @@ type Client struct {
 	
 	// Telemetry for silent observation (non-intrusive)
 	telemetry      *internal.TelemetryObserver
+	consensusState TrinaryDecision
+	maybePersisted bool
 }
+
+type TrinaryDecision string
+
+const (
+	DecisionNo    TrinaryDecision = "no"
+	DecisionMaybe TrinaryDecision = "maybe"
+	DecisionYes   TrinaryDecision = "yes"
+)
 
 // NewClient initializes a new LibPolyCall binding client
 // Returns an adapter that requires polycall.exe runtime for all operations
@@ -52,6 +62,7 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 		ctx:        ctx,
 		cancel:     cancel,
 		telemetry:  internal.NewTelemetryObserver(),
+		consensusState: DecisionMaybe,
 	}
 	
 	// Apply configuration options
@@ -80,6 +91,23 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 	})
 	
 	return client, nil
+}
+
+func (c *Client) SetConsensusState(state TrinaryDecision) error {
+	if state != DecisionNo && state != DecisionMaybe && state != DecisionYes {
+		return fmt.Errorf("invalid trinary consensus state: %s", state)
+	}
+	c.stateMutex.Lock()
+	defer c.stateMutex.Unlock()
+	c.consensusState = state
+	c.maybePersisted = state == DecisionMaybe
+	return nil
+}
+
+func (c *Client) GetConsensusState() (TrinaryDecision, bool) {
+	c.stateMutex.RLock()
+	defer c.stateMutex.RUnlock()
+	return c.consensusState, c.maybePersisted
 }
 
 // Connect establishes connection to polycall.exe runtime

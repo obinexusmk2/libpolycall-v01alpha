@@ -1,0 +1,4 @@
+behavior: retry_policy
+timeout_ms: 45000
+retry_count: 2
+ack_required: true

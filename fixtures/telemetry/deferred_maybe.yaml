@@ -1,0 +1,16 @@
+schema_version: "1.0"
+scenario_id: telemetry.deferred_maybe
+domain: telemetry
+decision: MAYBE
+status: deferred
+includes:
+  - ack_delayed.yaml
+  - retry_policy.yaml
+input:
+  stream: runtime.metrics
+  event: flush
+expected:
+  ack_received: true
+  timeout_ms: 30000
+  retry_count: 3
+  ack_required: true

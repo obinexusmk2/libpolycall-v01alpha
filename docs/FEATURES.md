@@ -179,3 +179,75 @@ The proposed features are planned for implementation across multiple releases:
 ## Contributing
 
 We welcome contributions to these new features. Please refer to our contribution guidelines for more information on how to participate in the development of these enhancements.
+## Trinary Telemetry Consensus (Implemented Contract)
+
+### Canonical model
+
+LibPolyCall bindings now share a canonical trinary state model for telemetry consensus:
+
+- `YES`
+- `NO`
+- `MAYBE`
+
+`MAYBE` is a first-class state and is not downgraded to unknown/error in adapter handling.
+
+Reference docs:
+
+- `docs/architecture/CONSENSUS_MODEL.md`
+- `docs/schema/telemetry-consensus.schema.json`
+
+### Stable command surface (cross-binding)
+
+The command surface is intentionally identical across bindings:
+
+```bash
+telemetry consensus --state yes|no|maybe --session <id>
+```
+
+Optional flags:
+
+```bash
+--ack-status <status> --persisted --storage-key <key>
+```
+
+### Serialization examples
+
+#### JSON payload
+
+```json
+{
+  "event_type": "telemetry.consensus",
+  "state": "MAYBE",
+  "session_id": "session-42",
+  "ack_status": "pending",
+  "persisted": false,
+  "storage_key": null,
+  "timestamp": "2026-03-28T00:00:00Z"
+}
+```
+
+#### Lua table payload
+
+```lua
+{
+  event_type = "telemetry.consensus",
+  state = "YES",
+  session_id = "session-42",
+  ack_status = "accepted",
+  persisted = true,
+  storage_key = "telemetry/session-42/consensus",
+  timestamp = "2026-03-28T00:00:00Z"
+}
+```
+
+### Protocol table
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `event_type` | string | yes | Constant: `telemetry.consensus` |
+| `state` | enum | yes | `YES`, `NO`, `MAYBE` |
+| `session_id` | string | yes | Session correlation id |
+| `ack_status` | string | yes | Ack lifecycle status |
+| `persisted` | bool | yes | Durable persistence flag |
+| `storage_key` | string/null | yes | Persistence path/key or null |
+| `timestamp` | RFC3339 string | yes | UTC creation timestamp |
