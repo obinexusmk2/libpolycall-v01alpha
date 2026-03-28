@@ -1,160 +1,120 @@
+# LibPolyCall v1 Usage Guide
 
+This guide documents the **current, deterministic** usage flow for the C runtime in `libpolycall-v1/`.
 
-1. Create the base configuration directory:
+## 1) Build and run `libpolycall-v1`
+
+From repository root:
+
 ```bash
-mkdir -p /opt/polycall/services/{node,python,java,go}
+cd libpolycall-v1
+make clean
+make bin
 ```
 
-2. Create the main config.Polycallfile in your project root:
+This produces the runtime executable at:
+
+- `libpolycall-v1/build/bin/polycall`
+
+Run in interactive mode:
+
 ```bash
-# In libpolycall/config.Polycallfile
-server node 3000:8080
-server python 3001:8081
-network start
-network_timeout=5000
-workspace_root=/opt/polycall/services
+./build/bin/polycall
 ```
 
-3. Create service-specific configurations:
+Run in non-interactive mode (config-driven):
+
 ```bash
-# In /opt/polycall/services/node/.polycallrc
-port=3000:8080
-server_type=node
-workspace=/opt/polycall/services/node
-
-# In /opt/polycall/services/python/.polycallrc
-port=3001:8081
-server_type=python
-workspace=/opt/polycall/services/python
+./build/bin/polycall -f config.Polycallfile
 ```
 
-Now, to run PolyCall in non-interactive mode with your bindings:
+---
 
-1. Start the PolyCall service:
+## 2) `config.Polycallfile` semantics
+
+`main.c` currently parses only a **small command subset** when started with `-f`.
+
+### Supported directives
+
+- `port <host>:<container>`
+  - Example: `port 8080:8084`
+  - Runtime behavior: stores the container side (`8084`) as the active listening port.
+- `network start`
+  - Starts network services using the active port.
+
+### Parsing behavior and constraints
+
+- Blank lines and lines beginning with `#` are ignored.
+- Directives are parsed token-by-token (`<command> <value>`).
+- Unknown directives are ignored in non-interactive mode.
+- If `network start` is never encountered, the runtime warns and stays without active network services.
+
+> Note: The sample `config.Polycallfile` includes additional keys (`server`, `network_timeout`, etc.). Those values are not consumed by the non-interactive parser path in `main.c` today.
+
+---
+
+## 3) Interactive vs non-interactive flow
+
+## Interactive flow (no `-f`)
+
+Start:
+
 ```bash
-./bin/polycall -f config.Polycallfile
+./build/bin/polycall
 ```
 
-2. Start the Node.js binding server:
+Then use CLI commands such as:
+
+- `help`
+- `start_network`
+- `stop_network`
+- `list_endpoints`
+- `list_clients`
+- `init`
+- `add_state NAME`
+- `list_states`
+- `list_transitions`
+- `status`
+- `history`
+- `quit`
+
+This mode is best for exploratory debugging and state-machine experimentation.
+
+## Non-interactive flow (`-f config.Polycallfile`)
+
+Start:
+
 ```bash
-cd ../bindings/node-polycall/examples
-node server.js
+./build/bin/polycall -f config.Polycallfile
 ```
 
-3. Test the connection:
-```bash
-# In another terminal
-node test_client.js
-```
+Boot sequence:
 
-To verify everything is working:
+1. Runtime initializes core context/state.
+2. Config file is read line-by-line.
+3. `port` sets runtime port.
+4. `network start` initializes and registers a network program.
+5. Runtime enters its event loop (`net_run` in a loop) until interrupted.
 
-1. Check the running services:
-```bash
-ps aux | grep polycall # Let me explain how to set up and use the non-interactive mode with your current codebase.
+This mode is best for repeatable process startup and binding integration.
 
-First, create the necessary configuration files in your project structure:
+---
 
-1. Create the base configuration directory:
-```bash
-sudo mkdir -p /opt/polycall/services/{node,python,java,go}
-```
+## 4) Binding integration pointers
 
-2. Create the main config.Polycallfile in your project root:
-```bash
-# In libpolycall/config.Polycallfile
-server node 3000:8080
-server python 3001:8081
-network start
-network_timeout=5000
-workspace_root=/opt/polycall/services
-```
+Use these directories as the canonical entry points:
 
-3. Create service-specific configurations:
-```bash
-# In /opt/polycall/services/node/.polycallrc
-port=3000:8080
-server_type=node
-workspace=/opt/polycall/services/node
+- Node binding: `bindings/node-polycall/`
+  - Docs: `bindings/node-polycall/README.md`
+  - Example server: `bindings/node-polycall/examples/server.js`
+- Python binding: `bindings/pypolycall/`
+  - Docs: `bindings/pypolycall/README.md`
 
-# In /opt/polycall/services/python/.polycallrc
-port=3001:8081
-server_type=python
-workspace=/opt/polycall/services/python
-```
+### Typical local integration sequence
 
-Now, to run PolyCall in non-interactive mode with your bindings:
+1. Build runtime (`make bin` in `libpolycall-v1`).
+2. Start runtime (`./build/bin/polycall -f config.Polycallfile`).
+3. Start binding-side example/client in the target binding directory.
+4. Validate connect/auth/request flow from the binding README examples.
 
-1. Start the PolyCall service:
-```bash
-./bin/polycall -f config.Polycallfile
-```
-
-2. Start the Node.js binding server:
-```bash
-cd ../bindings/node-polycall/examples
-node server.js
-```
-
-3. Test the connection:
-```bash
-# In another terminal
-node test_client.js
-```
-
-To verify everything is working:
-
-1. Check the running services:
-```bash
-ps aux | grep polycall
-```
-
-2. Monitor the port mappings:
-```bash
-netstat -tulpn | grep polycall
-```
-
-Your Node.js binding will automatically connect to the PolyCall service through the configured port mapping (3000:8080). The PolyCall service handles the routing and communication between different language servers.
-
-To integrate a new language binding:
-
-1. Add its configuration to config.Polycallfile:
-```
-server newlang 3004:8084
-```
-
-2. Create its service directory and configuration:
-```bash
-mkdir -p /opt/polycall/services/newlang
-echo "port=3004:8084" > /opt/polycall/services/newlang/.polycallrc
-```
-
-3. Restart the PolyCall service to apply the new configuration.
-
-This setup allows PolyCall to act as a central coordinator for all your language bindings while maintaining clean separation between services.
-```
-
-2. Monitor the port mappings:
-```bash
-netstat -tulpn | grep polycall
-```
-
-
-Your Node.js binding will automatically connect to the PolyCall service through the configured port mapping (3000:8080). The PolyCall service handles the routing and communication between different language servers.
-
-To integrate a new language binding:
-
-1. Add its configuration to config.Polycallfile:
-```
-server newlang 3004:8084
-```
-
-2. Create its service directory and configuration:
-```bash
-mkdir -p /opt/polycall/services/newlang
-echo "port=3004:8084" > /opt/polycall/services/newlang/.polycallrc
-```
-
-3. Restart the PolyCall service to apply the new configuration.
-
-This setup allows PolyCall to act as a central coordinator for all your language bindings while maintaining clean separation between services.
+If you add a new binding, keep the runtime startup unchanged and add binding-specific connection instructions in that binding's own README.

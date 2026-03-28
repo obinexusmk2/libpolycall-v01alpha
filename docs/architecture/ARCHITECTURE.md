@@ -1,52 +1,60 @@
-# LibPolyCall Architecture Documentation
+# LibPolyCall Repository Architecture (Current)
 
-## Project Structure Overview
+This document reflects only directories and modules that exist in this repository snapshot.
 
-This document outlines the systematic architecture of the LibPolyCall Trial implementation, maintaining clear separation of concerns between binding logic and application projects.
+## Top-level layout
 
-### Directory Architecture
-
-```
-libpolycall-trial/
-├── bindings/                    # Language binding implementations
-│   ├── node-polycall/          # Node.js binding with core modules
-│   ├── pypolycall/             # Python binding with enhanced modules
-│   └── dual-polycall-experiment/ # Experimental dual-binding protocols
-├── projects/                    # Concrete use case implementations
-│   ├── banking-system/         # Financial transaction processing
-│   ├── todolist-manager/       # Task management system
-│   └── books-catalog/          # Library management system
-├── examples/                   # Language-specific test clients
-├── docs/                       # Comprehensive documentation
-└── tools/                      # Development and deployment utilities
+```text
+.
+├── libpolycall-v1/          # Core C runtime and protocol/state/network implementation
+├── bindings/                # Language bindings (Node, Python, Go, Lua, Java)
+├── projects/                # Example vertical projects built around PolyCall concepts
+├── examples/                # Small cross-language client examples
+├── docs/                    # Documentation set
+├── tools/                   # Utility scripts
+├── ports/libpolycall/       # Packaging metadata (vcpkg port)
+├── images/                  # Repository images/assets
+└── LICENSE
 ```
 
-### Separation of Concerns
+## Runtime core (`libpolycall-v1/`)
 
-**Binding Layer**: 
-- Core LibPolyCall communication protocols
-- Language-specific binding implementations
-- State management and synchronization
-- Zero-trust security enforcement
+- `main.c`
+  - CLI entry point; interactive and `-f` non-interactive runtime flows.
+- `src/polycall.c`
+  - Core context lifecycle (`polycall_init_with_config`, `polycall_cleanup`).
+- `src/network.c`
+  - Network program/endpoints/client lifecycle.
+- `src/polycall_state_machine.c`
+  - State machine creation, states, transitions, execution.
+- `src/polycall_protocol.c`
+  - Protocol message handling and wire-level operations.
+- `include/`
+  - Public C headers consumed by runtime/tests and external integrations.
+- `test/`
+  - C tests for state/state-machine behavior.
 
-**Application Layer**:
-- Concrete business logic implementations
-- Professional web interfaces
-- Database integration and management
-- Comprehensive testing frameworks
+## Bindings (`bindings/`)
 
-### Development Workflow
+- `node-polycall/` (JavaScript modules + examples)
+- `pypolycall/` (Python package and tests)
+- `go-polycall/` (Go package/config/examples)
+- `lua-polycall/` (Lua modules + CLI)
+- `java-polycall/` (Java binding + native JNI bridge)
 
-1. **Binding Development**: Enhance language-specific bindings in `bindings/`
-2. **Application Development**: Implement business logic in `projects/`
-3. **Integration Testing**: Validate binding-application communication
-4. **Production Deployment**: Systematic deployment using documented protocols
+Repository also contains `*-outdated` directories; treat them as historical/reference rather than primary integration targets.
 
-### Technical Standards
+## Example and project layers
 
-- **Code Quality**: Professional implementation standards with comprehensive error handling
-- **Testing**: Systematic test coverage for all components
-- **Documentation**: Clear documentation for all architectural components
-- **Security**: Zero-trust principles consistently applied across all layers
+- `examples/`
+  - Lightweight language client examples (`.py`, `.js`, `.go`, `.lua`).
+- `projects/`
+  - Multi-file scenario projects (e.g., banking system, telemetry dashboard, edge IoT mesh, banking secure bridge).
 
-Generated: 2025-06-01T04:11:53.099960
+These are consumers of PolyCall ideas and integration patterns; the authoritative runtime implementation remains in `libpolycall-v1/`.
+
+## Documentation map
+
+- `docs/USAGE.md` – build/run and runtime operation.
+- `docs/TRAVERSAL.md` – source-level navigation map.
+- `docs/architecture/ARCHITECTURE.md` – this file.
