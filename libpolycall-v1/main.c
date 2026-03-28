@@ -2,6 +2,7 @@
 #include "polycall_protocol.h"
 #include "polycall_state_machine.h"
 #include "polycall_tokenizer.h"
+#include "polycall_telemetry.h"
 #include "network.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -68,6 +69,7 @@ static bool cmd_init(const PPI_Runtime* runtime, const char* arg1, const char* a
 static bool cmd_add_state(const PPI_Runtime* runtime, const char* name, const char* arg2, const char* arg3);
 static bool cmd_help(const PPI_Runtime* runtime, const char* arg1, const char* arg2, const char* arg3);
 static bool cmd_quit(const PPI_Runtime* runtime, const char* arg1, const char* arg2, const char* arg3);
+static bool cmd_telemetry(const PPI_Runtime* runtime, const char* subcommand, const char* arg2, const char* arg3);
 
 // State callbacks
 static void on_init(polycall_context_t ctx) {
@@ -115,6 +117,7 @@ static const Command COMMANDS[] = {
     {"init", (CommandHandler)cmd_init, "Initialize the state machine", "init"},
     {"add_state", (CommandHandler)cmd_add_state, "Add a new state", "add_state NAME"},
     {"help", (CommandHandler)cmd_help, "Show help", "help"},
+    {"telemetry", (CommandHandler)cmd_telemetry, "Telemetry controls", "telemetry status|stream|export <path>"},
     {"quit", (CommandHandler)cmd_quit, "Exit program", "quit"},
 };
 
@@ -124,6 +127,7 @@ static bool cmd_init(const PPI_Runtime* runtime, const char* arg1, const char* a
 static bool cmd_add_state(const PPI_Runtime* runtime, const char* name, const char* arg2, const char* arg3);
 static bool cmd_help(const PPI_Runtime* runtime, const char* arg1, const char* arg2, const char* arg3);
 static bool cmd_quit(const PPI_Runtime* runtime, const char* arg1, const char* arg2, const char* arg3);
+static bool cmd_telemetry(const PPI_Runtime* runtime, const char* subcommand, const char* arg2, const char* arg3);
 
 static void on_network_connect(NetworkEndpoint* endpoint) {
     if (endpoint) {
@@ -236,9 +240,44 @@ static bool cmd_help(const PPI_Runtime* runtime, const char* arg1, const char* a
     
     printf("\nMiscellaneous Commands:\n");
     printf("  help                - Show this help message\n");
+    printf("  telemetry status    - Show telemetry sink status\n");
+    printf("  telemetry stream    - Enable telemetry JSON output to stdout\n");
+    printf("  telemetry export <path> - Export telemetry JSON lines to file\n");
     printf("  quit                - Exit the program\n");
     
     return true;
+}
+
+static bool cmd_telemetry(const PPI_Runtime* runtime, const char* subcommand, const char* arg2, const char* arg3) {
+    (void)runtime; (void)arg3;
+
+    if (!subcommand) return false;
+
+    if (strcmp(subcommand, "status") == 0) {
+        polycall_telemetry_status_t status = {0};
+        polycall_telemetry_get_status(&status);
+        printf("Telemetry status:\n");
+        printf("  stream_enabled: %s\n", status.stream_enabled ? "true" : "false");
+        printf("  export_enabled: %s\n", status.export_enabled ? "true" : "false");
+        printf("  export_path: %s\n", status.export_enabled ? status.export_path : "(not configured)");
+        printf("  emitted_events: %llu\n", (unsigned long long)status.emitted_events);
+        return true;
+    }
+
+    if (strcmp(subcommand, "stream") == 0) {
+        if (!polycall_telemetry_enable_stream(true)) return false;
+        printf("Telemetry stream enabled (stdout JSON lines)\n");
+        return true;
+    }
+
+    if (strcmp(subcommand, "export") == 0) {
+        if (!arg2) return false;
+        if (!polycall_telemetry_set_export_path(arg2)) return false;
+        printf("Telemetry export enabled: %s\n", arg2);
+        return true;
+    }
+
+    return false;
 }
 
 static void list_states(void) {
@@ -367,8 +406,15 @@ static bool initialize_runtime(void) {
         return false;
     }
 
-g_runtime.state_machine = NULL;
-g_runtime.running = true;
+    if (!polycall_telemetry_init()) {
+        fprintf(stderr, "Failed to initialize telemetry runtime\n");
+        polycall_cleanup(g_runtime.pc_ctx);
+        g_runtime.pc_ctx = NULL;
+        return false;
+    }
+
+    g_runtime.state_machine = NULL;
+    g_runtime.running = true;
     return true;
 }
 
@@ -685,6 +731,7 @@ static void cleanup_runtime(void) {
         polycall_cleanup(g_runtime.pc_ctx);
         g_runtime.pc_ctx = NULL;
     }
+    polycall_telemetry_shutdown();
 
 #ifdef _WIN32
     if (g_runtime.wsaInitialized) {
@@ -828,6 +875,8 @@ int main(int argc, char* argv[]) {
 
             char *command = strtok(input, " ");
             char *arg1 = strtok(NULL, " ");
+            char *arg2 = strtok(NULL, " ");
+            char *arg3 = strtok(NULL, " ");
             add_to_history(input);
 
             if (strcmp(command, "start_network") == 0) {
@@ -881,6 +930,10 @@ int main(int argc, char* argv[]) {
                     printf("State '%s' added successfully\n", arg1);
                 } else {
                     printf("Failed to add state '%s'\n", arg1);
+                }
+            } else if (strcmp(command, "telemetry") == 0) {
+                if (!cmd_telemetry(&g_runtime, arg1, arg2, arg3)) {
+                    printf("Usage: telemetry status|stream|export <path>\n");
                 }
             } else {
                 process_command(&g_runtime, input);

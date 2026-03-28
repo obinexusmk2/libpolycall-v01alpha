@@ -1,5 +1,6 @@
 #include "polycall_state_machine.h"
 #include "polycall.h"
+#include "polycall_telemetry.h"
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -118,6 +119,34 @@ static inline uint32_t calculate_state_checksum(const PolyCall_State* state) {
 static inline void update_state_timestamp(PolyCall_State* state) {
     state->timestamp = (uint64_t)time(NULL);
     state->version++;
+}
+
+static void emit_state_machine_event(
+    polycall_telemetry_event_type_t type,
+    polycall_decision_state_t decision,
+    const char* action,
+    const char* status,
+    const char* subject,
+    int from_state,
+    int to_state,
+    uint32_t checksum,
+    double consensus_ratio,
+    const char* details
+) {
+    polycall_telemetry_event_t event = {
+        .event_type = type,
+        .decision_state = decision,
+        .component = "state_machine",
+        .action = action,
+        .status = status,
+        .subject = subject,
+        .from_state = from_state,
+        .to_state = to_state,
+        .checksum = checksum,
+        .consensus_ratio = consensus_ratio,
+        .details = details
+    };
+    polycall_telemetry_emit(&event);
 }
 
 
@@ -279,6 +308,18 @@ polycall_sm_status_t polycall_sm_execute_transition(
 
     if (!transition || !transition->is_valid) {
         sm->diagnostics.failed_transitions++;
+        emit_state_machine_event(
+            POLYCALL_TELEMETRY_TRANSITION,
+            POLYCALL_DECISION_NO,
+            "execute_transition",
+            "invalid_transition",
+            transition_name,
+            -1,
+            -1,
+            0,
+            0.0,
+            "transition not found or marked invalid"
+        );
         return POLYCALL_SM_ERROR_INVALID_TRANSITION;
     }
 
@@ -287,12 +328,53 @@ polycall_sm_status_t polycall_sm_execute_transition(
 
     /* Check state locks and guard conditions */
     if (from_state->is_locked || to_state->is_locked) 
+    {
+        emit_state_machine_event(
+            POLYCALL_TELEMETRY_TRANSITION,
+            POLYCALL_DECISION_NO,
+            "execute_transition",
+            "locked_state",
+            transition_name,
+            (int)transition->from_state,
+            (int)transition->to_state,
+            0,
+            0.0,
+            "transition blocked due to lock"
+        );
         return POLYCALL_SM_ERROR_STATE_LOCKED;
+    }
     
-    if (transition->guard_condition && 
-        !transition->guard_condition(from_state, to_state)) {
-        sm->diagnostics.failed_transitions++;
-        return POLYCALL_SM_ERROR_INVALID_TRANSITION;
+    if (transition->guard_condition) {
+        bool allowed = transition->guard_condition(from_state, to_state);
+        emit_state_machine_event(
+            POLYCALL_TELEMETRY_CONSENSUS,
+            allowed ? POLYCALL_DECISION_YES : POLYCALL_DECISION_NO,
+            "guard_evaluation",
+            allowed ? "accepted" : "rejected",
+            transition_name,
+            (int)transition->from_state,
+            (int)transition->to_state,
+            transition->guard_checksum,
+            allowed ? 1.0 : 0.0,
+            "guard condition evaluated"
+        );
+        if (!allowed) {
+            sm->diagnostics.failed_transitions++;
+            return POLYCALL_SM_ERROR_INVALID_TRANSITION;
+        }
+    } else {
+        emit_state_machine_event(
+            POLYCALL_TELEMETRY_CONSENSUS,
+            POLYCALL_DECISION_MAYBE,
+            "guard_evaluation",
+            "unguarded",
+            transition_name,
+            (int)transition->from_state,
+            (int)transition->to_state,
+            0,
+            0.5,
+            "no guard condition configured"
+        );
     }
 
     /* Execute transition actions */
@@ -303,6 +385,18 @@ polycall_sm_status_t polycall_sm_execute_transition(
     /* Update state machine */
     sm->current_state = transition->to_state;
     update_state_timestamp(to_state);
+    emit_state_machine_event(
+        POLYCALL_TELEMETRY_TRANSITION,
+        POLYCALL_DECISION_YES,
+        "execute_transition",
+        "completed",
+        transition_name,
+        (int)transition->from_state,
+        (int)transition->to_state,
+        to_state->checksum,
+        1.0,
+        "transition completed successfully"
+    );
 
     return POLYCALL_SM_SUCCESS;
 }
@@ -324,13 +418,50 @@ polycall_sm_status_t polycall_sm_verify_state_integrity(
 
     if (current_checksum != state->checksum) {
         sm->diagnostics.integrity_violations++;
+        emit_state_machine_event(
+            POLYCALL_TELEMETRY_INTEGRITY,
+            POLYCALL_DECISION_NO,
+            "verify_state_integrity",
+            "checksum_mismatch",
+            state->name,
+            (int)state_id,
+            (int)state_id,
+            current_checksum,
+            0.0,
+            "state checksum mismatch"
+        );
         return POLYCALL_SM_ERROR_INTEGRITY_CHECK_FAILED;
     }
 
     if (sm->integrity_check && !sm->integrity_check(state)) {
         sm->diagnostics.integrity_violations++;
+        emit_state_machine_event(
+            POLYCALL_TELEMETRY_INTEGRITY,
+            POLYCALL_DECISION_NO,
+            "verify_state_integrity",
+            "integrity_callback_failed",
+            state->name,
+            (int)state_id,
+            (int)state_id,
+            current_checksum,
+            0.0,
+            "custom integrity check failed"
+        );
         return POLYCALL_SM_ERROR_INTEGRITY_CHECK_FAILED;
     }
+
+    emit_state_machine_event(
+        POLYCALL_TELEMETRY_INTEGRITY,
+        POLYCALL_DECISION_YES,
+        "verify_state_integrity",
+        "ok",
+        state->name,
+        (int)state_id,
+        (int)state_id,
+        current_checksum,
+        1.0,
+        "integrity verification passed"
+    );
 
     return POLYCALL_SM_SUCCESS;
 }

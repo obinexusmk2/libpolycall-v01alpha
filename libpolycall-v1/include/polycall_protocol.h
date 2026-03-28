@@ -4,6 +4,7 @@
 #include "polycall.h"
 #include "polycall_state_machine.h"
 #include "network.h"
+#include "polycall_telemetry.h"
 #include <stdint.h>
 #include <stdbool.h>
 
