@@ -1,4 +1,5 @@
 #include "network.h"
+#include "polycall_telemetry.h"
 #ifdef _WIN32
     #include <winsock2.h>
     #include <ws2tcpip.h>
@@ -14,6 +15,8 @@
     #include <sys/select.h>
     typedef void* sock_opt_type;
 #endif
+
+static void emit_connection_event(const char* action, polycall_decision_state_t decision, const struct sockaddr_in* addr, const char* details);
 
 // Set socket non-blocking mode
 static int set_nonblocking(int sockfd) {
@@ -424,7 +427,9 @@ void net_run(NetworkProgram* program) {
                 if (program->handlers.on_connect) {
                     program->handlers.on_connect(&client_endpoint);
                 }
+                emit_connection_event("connect", POLYCALL_DECISION_YES, &client_addr, "client accepted");
             } else {
+                emit_connection_event("connect", POLYCALL_DECISION_NO, &client_addr, "client rejected: capacity");
                 close(new_socket);
             }
         }
@@ -455,6 +460,7 @@ void net_run(NetworkProgram* program) {
                 if (program->handlers.on_disconnect) {
                     program->handlers.on_disconnect(&client_endpoint);
                 }
+                emit_connection_event("disconnect", POLYCALL_DECISION_NO, &program->clients[i].addr, "client disconnected");
                 
                 net_remove_client(program, program->clients[i].socket_fd);
             } else {
@@ -479,4 +485,30 @@ void net_run(NetworkProgram* program) {
         pthread_mutex_unlock(&program->clients[i].lock);
     }
     pthread_mutex_unlock(&program->clients_lock);
+}
+
+static void emit_connection_event(const char* action, polycall_decision_state_t decision, const struct sockaddr_in* addr, const char* details) {
+    char subject[128] = "unknown:0";
+    if (addr) {
+        char ip[INET_ADDRSTRLEN] = {0};
+        if (!inet_ntop(AF_INET, &addr->sin_addr, ip, sizeof(ip))) {
+            strncpy(ip, "unknown", sizeof(ip) - 1);
+        }
+        snprintf(subject, sizeof(subject), "%s:%u", ip, (unsigned int)ntohs(addr->sin_port));
+    }
+
+    polycall_telemetry_event_t event = {
+        .event_type = POLYCALL_TELEMETRY_CONNECTION,
+        .decision_state = decision,
+        .component = "network",
+        .action = action,
+        .status = (decision == POLYCALL_DECISION_YES) ? "ok" : "closed",
+        .subject = subject,
+        .from_state = -1,
+        .to_state = -1,
+        .checksum = 0,
+        .consensus_ratio = 0.0,
+        .details = details ? details : ""
+    };
+    polycall_telemetry_emit(&event);
 }

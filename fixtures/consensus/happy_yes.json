@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "scenario_id": "consensus.happy_yes",
+  "domain": "consensus",
+  "decision": "YES",
+  "status": "approved",
+  "includes": [
+    "decision_yes.yaml"
+  ],
+  "input": {
+    "proposal_id": "proposal-alpha",
+    "quorum": 3
+  },
+  "expected": {
+    "approval_count": 3,
+    "rejection_count": 0
+  }
+}

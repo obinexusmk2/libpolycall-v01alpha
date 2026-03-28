@@ -18,42 +18,23 @@ typedef enum {
     POLYCALL_MSG_RESPONSE = 0x04,
     POLYCALL_MSG_ERROR = 0x05,
     POLYCALL_MSG_HEARTBEAT = 0x06,
-    POLYCALL_MSG_TRINARY_DECISION = 0x07,
-    POLYCALL_MSG_TRINARY_ACK = 0x08
+    POLYCALL_MSG_CONSENSUS_ECHO = 0x07,
+    POLYCALL_MSG_CONSENSUS_ACK = 0x08
 } polycall_message_type_t;
 
+// Shared trinary decision model
 typedef enum {
-    POLYCALL_DECISION_EVENT_SUBMITTED = 0,
-    POLYCALL_DECISION_EVENT_ECHOED = 1,
-    POLYCALL_DECISION_EVENT_CONFIRMED = 2,
-    POLYCALL_DECISION_EVENT_EXPIRED = 3
-} polycall_decision_event_t;
+    POLYCALL_DECISION_NO = 0x00,
+    POLYCALL_DECISION_MAYBE = 0x01,
+    POLYCALL_DECISION_YES = 0x02
+} polycall_decision_t;
 
+// Wire-level consensus payload structure
 typedef struct {
-    uint32_t decision_id;
-    uint32_t proposer_id;
-    uint32_t ttl_ms;
-    polycall_trinary_decision_t decision;
-    uint8_t reserved[3];
-} polycall_trinary_decision_message_t;
-
-typedef struct {
-    uint32_t decision_id;
-    uint32_t ack_sequence;
-    uint32_t responder_id;
-    polycall_trinary_decision_t echoed_decision;
-    uint8_t accepted;
-    uint8_t reserved[2];
-} polycall_trinary_ack_message_t;
-
-typedef struct {
-    uint32_t decision_id;
-    uint32_t sequence;
-    uint64_t timestamp_ms;
-    polycall_trinary_decision_t decision;
-    polycall_decision_event_t lifecycle_event;
-    uint8_t source_message_type;
-} polycall_decision_telemetry_event_t;
+    uint8_t decision;          // polycall_decision_t
+    uint32_t correlation_id;   // sequence identifier being acknowledged/echoed
+    uint8_t persisted;         // 1 when MAYBE state is durably persisted
+} polycall_consensus_payload_t;
 
 // Protocol states
 typedef enum {
@@ -90,6 +71,9 @@ typedef struct {
     PolyCall_StateMachine* state_machine;
     NetworkEndpoint* endpoint;
     uint32_t next_sequence;
+    uint32_t last_consensus_ack;
+    polycall_decision_t consensus_state;
+    bool consensus_maybe_persisted;
     polycall_protocol_state_t state;
     void* user_data;
 } polycall_protocol_context_t;
@@ -100,9 +84,6 @@ typedef struct {
     void (*on_auth_request)(polycall_protocol_context_t* ctx, const char* credentials);
     void (*on_command)(polycall_protocol_context_t* ctx, const char* command, size_t length);
     void (*on_error)(polycall_protocol_context_t* ctx, const char* error);
-    void (*on_trinary_decision)(polycall_protocol_context_t* ctx, const polycall_trinary_decision_message_t* decision);
-    void (*on_trinary_ack)(polycall_protocol_context_t* ctx, const polycall_trinary_ack_message_t* ack);
-    void (*on_decision_telemetry)(polycall_protocol_context_t* ctx, const polycall_decision_telemetry_event_t* event);
     void (*on_state_change)(polycall_protocol_context_t* ctx, polycall_protocol_state_t old_state, 
                            polycall_protocol_state_t new_state);
 } polycall_protocol_callbacks_t;
@@ -168,14 +149,26 @@ bool polycall_protocol_authenticate(
     size_t credentials_length
 );
 
-bool polycall_protocol_send_trinary_decision(
+// Consensus helpers
+bool polycall_protocol_send_consensus_echo(
     polycall_protocol_context_t* ctx,
-    const polycall_trinary_decision_message_t* decision
+    polycall_decision_t decision,
+    uint32_t correlation_id
 );
 
-bool polycall_protocol_send_trinary_ack(
+bool polycall_protocol_send_consensus_ack(
     polycall_protocol_context_t* ctx,
-    const polycall_trinary_ack_message_t* ack
+    polycall_decision_t decision,
+    uint32_t correlation_id,
+    bool persisted
+);
+
+polycall_decision_t polycall_protocol_get_consensus_state(
+    const polycall_protocol_context_t* ctx
+);
+
+bool polycall_protocol_is_maybe_persisted(
+    const polycall_protocol_context_t* ctx
 );
 
 // Protocol error handling

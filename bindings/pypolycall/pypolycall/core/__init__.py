@@ -7,11 +7,12 @@ from .binding import ProtocolBinding
 
 # Conditional imports for graceful degradation
 try:
-    from .protocol import ProtocolHandler, MessageTypes, StateTransitions
+    from .protocol import ProtocolHandler, MessageTypes, StateTransitions, TrinaryDecision
 except ImportError:
     ProtocolHandler = None
     MessageTypes = None
     StateTransitions = None
+    TrinaryDecision = None
 
 try:
     from .telemetry import TelemetryObserver, MetricsCollector
@@ -24,6 +25,7 @@ __all__ = [
     "ProtocolHandler", 
     "MessageTypes",
     "StateTransitions",
+    "TrinaryDecision",
     "TelemetryObserver",
     "MetricsCollector"
 ]

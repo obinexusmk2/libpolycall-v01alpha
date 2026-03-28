@@ -30,16 +30,20 @@ _check_architecture_compliance()
 # Core imports with error handling
 try:
     from .core.binding import ProtocolBinding
-    from .core.protocol import ProtocolHandler, MessageTypes, StateTransitions
+    from .core.protocol import ProtocolHandler, MessageTypes, StateTransitions, TrinaryDecision
     from .core.telemetry import TelemetryObserver, MetricsCollector
+    from .protocol.constants import DEFAULT_POLYCALL_HOST, DEFAULT_POLYCALL_PORT
 except ImportError as e:
     warnings.warn(f"PyPolyCall core components incomplete: {e}", ImportWarning)
     ProtocolBinding = None
     ProtocolHandler = None
     MessageTypes = None
     StateTransitions = None
+    TrinaryDecision = None
     TelemetryObserver = None
     MetricsCollector = None
+    DEFAULT_POLYCALL_HOST = None
+    DEFAULT_POLYCALL_PORT = None
 
 # CLI imports with error handling
 try:
@@ -72,8 +76,11 @@ __all__ = [
     "ProtocolHandler", 
     "MessageTypes",
     "StateTransitions",
+    "TrinaryDecision",
     "TelemetryObserver",
     "MetricsCollector",
+    "DEFAULT_POLYCALL_HOST",
+    "DEFAULT_POLYCALL_PORT",
     
     # CLI components
     "CLI",
