@@ -28,7 +28,22 @@ PLATFORM_LIBS :=
 LINK_LIBS = $(LDLIBS) $(PLATFORM_LIBS)
 
 # Platform-specific settings
+UNAME_S := $(shell uname -s 2>/dev/null)
+IS_WINDOWS := 0
 ifeq ($(OS),Windows_NT)
+    IS_WINDOWS := 1
+endif
+ifneq (,$(findstring MINGW,$(UNAME_S)))
+    IS_WINDOWS := 1
+endif
+ifneq (,$(findstring MSYS,$(UNAME_S)))
+    IS_WINDOWS := 1
+endif
+ifneq (,$(findstring CYGWIN,$(UNAME_S)))
+    IS_WINDOWS := 1
+endif
+
+ifeq ($(IS_WINDOWS),1)
     EXE_EXT := .exe
     SHARED_EXT := dll
     SHARED_FLAG := -shared
@@ -61,7 +76,7 @@ EXECUTABLE := $(BIN_DIR)/polycall$(EXE_EXT)
 DEBUG_FLAGS := -g -DDEBUG
 RELEASE_FLAGS := -O2 -DNDEBUG
 
-.PHONY: all debug release static shared bin clean distclean dirs help
+.PHONY: all debug release static shared dll bin clean distclean dirs help
 
 all: dirs static shared bin
 
@@ -76,6 +91,9 @@ static: dirs $(STATIC_LIB)
 
 # shared output: build/lib/libpolycall.$(SHARED_EXT)
 shared: dirs $(SHARED_LIB)
+
+# Windows convenience alias
+dll: shared
 
 # bin output: build/bin/polycall$(EXE_EXT)
 bin: dirs $(EXECUTABLE)
@@ -115,5 +133,6 @@ help:
 	@echo "  release - Build all targets with release flags"
 	@echo "  static  - Build static library ($(STATIC_LIB))"
 	@echo "  shared  - Build shared library ($(SHARED_LIB))"
+	@echo "  dll     - Alias of shared for Windows builds"
 	@echo "  bin     - Build executable ($(EXECUTABLE))"
 	@echo "  clean   - Remove build artifacts"
