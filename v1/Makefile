@@ -22,17 +22,21 @@ RELEASE_FLAGS := -O2 -DNDEBUG
 SRC_DIR := src
 INC_DIR := include
 BUILD_DIR := build
+# Compiler-specific object directory avoids cross-toolchain object format conflicts
+CC_TAG := $(notdir $(firstword $(CC)))
+CC_TAG := $(subst .,_,$(CC_TAG))
+OBJ_DIR := $(BUILD_DIR)/obj_$(CC_TAG)
 LIB_DIR := lib
 BIN_DIR := bin
 
 # Source files
 SRCS := $(wildcard $(SRC_DIR)/*.c)
-OBJS := $(SRCS:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o)
+OBJS := $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
 # Main executable
 MAIN_SRC := main.c
-MAIN_OBJ := $(BUILD_DIR)/main.o
+MAIN_OBJ := $(OBJ_DIR)/main.o
 EXECUTABLE := polycall$(EXE_EXT)
 
 # Library name
@@ -47,13 +51,16 @@ INSTALL_LIB_DIR := $(PREFIX)/lib
 INSTALL_BIN_DIR := $(PREFIX)/bin
 
 # Default target
-.PHONY: all
+.PHONY: all dll
 all: dirs $(STATIC_LIB) $(SHARED_LIB) $(BIN_DIR)/$(EXECUTABLE)
+
+# Windows-compatible alias used by existing docs and scripts
+dll: $(SHARED_LIB)
 
 # Create necessary directories
 .PHONY: dirs
 dirs:
-	@mkdir -p $(BUILD_DIR) $(LIB_DIR) $(BIN_DIR)
+	@mkdir -p $(BUILD_DIR) $(OBJ_DIR) $(LIB_DIR) $(BIN_DIR)
 
 # Debug build
 .PHONY: debug
@@ -66,23 +73,23 @@ release: CFLAGS += $(RELEASE_FLAGS)
 release: all
 
 # Compile source files
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | dirs
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 # Compile main executable
-$(BUILD_DIR)/main.o: $(MAIN_SRC)
+$(OBJ_DIR)/main.o: $(MAIN_SRC) | dirs
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 # Create static library
-$(STATIC_LIB): $(OBJS)
+$(STATIC_LIB): $(OBJS) | dirs
 	ar rcs $@ $^
 
 # Create shared library
-$(SHARED_LIB): $(OBJS)
+$(SHARED_LIB): $(OBJS) | dirs
 	$(CC) -shared -o $@ $^ $(LDFLAGS)
 
 # Link executable
-$(BIN_DIR)/$(EXECUTABLE): $(MAIN_OBJ) $(STATIC_LIB)
+$(BIN_DIR)/$(EXECUTABLE): $(MAIN_OBJ) $(STATIC_LIB) | dirs
 	$(CC) $^ -o $@ $(LDFLAGS) -L$(LIB_DIR) -l:$(LIB_NAME).a
 
 # Install (Unix-like systems only)
@@ -126,6 +133,7 @@ help:
 	@echo "  all        - Build everything (default)"
 	@echo "  debug      - Build with debug flags"
 	@echo "  release    - Build with release flags"
+	@echo "  dll        - Build shared library alias for Windows workflows"
 	@echo "  clean      - Remove build files"
 	@echo "  install    - Install libraries and headers (Unix-like only)"
 	@echo "  uninstall  - Remove installed files (Unix-like only)"
