@@ -1,0 +1,20 @@
+{
+  "name": "OBINexus Registry",
+  "version": "1.0.0",
+  "description": "JSON registry index for OBINexus services.",
+  "services": [
+    {
+      "id": "libpolycall",
+      "name": "LibPolyCall",
+      "description": "Polymorphic runtime library for PolyCall protocol services.",
+      "homepage": "https://polycall.obinexus.org",
+      "install": "https://r.obinexus.org/install/libpolycall",
+      "routes": {
+        "api": "https://r.obinexus.org/api/",
+        "ffi": "https://r.obinexus.org/ffi/",
+        "micro": "https://r.obinexus.org/micro/",
+        "health": "https://r.obinexus.org/health"
+      }
+    }
+  ]
+}
